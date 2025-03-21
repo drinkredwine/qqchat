@@ -1,1 +1,0 @@
-export { default } from "file:///Users/dodo/code/mycoder1/hello-world/node_modules/@nuxt/vite-builder/dist/runtime/client.manifest.mjs"

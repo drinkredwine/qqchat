@@ -2,6 +2,7 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@nuxtjs/tailwindcss'],
+
   app: {
     head: {
       title: 'Hello World - Nuxt 3',
@@ -11,5 +12,7 @@ export default defineNuxtConfig({
         { name: 'description', content: 'A simple Nuxt 3 Hello World application' }
       ]
     }
-  }
+  },
+
+  compatibilityDate: '2025-03-21'
 })
