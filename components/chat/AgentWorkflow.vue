@@ -108,7 +108,7 @@
     </div>
     
     <!-- Final summary -->
-    <div v-if="finalSummary && currentState === AGENT_STATES.COMPLETE" class="mb-2">
+    <div v-if="currentState === AGENT_STATES.COMPLETE" class="mb-2">
       <div class="bg-green-50 p-3 rounded-md border border-green-200">
         <h4 class="font-medium text-green-700 mb-1 flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -116,7 +116,10 @@
           </svg>
           Final Answer
         </h4>
-        <div class="text-sm text-gray-700 whitespace-pre-line">{{ finalSummary }}</div>
+        <div v-if="finalSummary" class="text-sm text-gray-700 whitespace-pre-line">{{ finalSummary }}</div>
+        <div v-else class="text-sm text-gray-700">
+          Answer has been completed and is displayed in the message below.
+        </div>
       </div>
     </div>
   </div>

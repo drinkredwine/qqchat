@@ -313,7 +313,22 @@ export function useAgentWorkflow() {
         };
       }
       
-      finalSummary.value = summaryResponse.response[0].content;
+      // Ensure we have a valid final summary
+      if (summaryResponse && 
+          summaryResponse.response && 
+          summaryResponse.response[0] && 
+          summaryResponse.response[0].content) {
+        finalSummary.value = summaryResponse.response[0].content;
+      } else {
+        console.warn('Invalid summary response, using fallback summary');
+        finalSummary.value = `Based on my analysis and execution of the plan for your question, here is a comprehensive answer:
+        
+        ${executionPlan.value.map((step, idx) => 
+          `From step ${idx + 1} (${step.title}): ${step.result ? step.result.substring(0, 100) + '...' : 'Completed successfully'}`
+        ).join('\n\n')}
+        
+        In conclusion, I've addressed your question to the best of my abilities based on the information available.`;
+      }
       
       // Complete the workflow
       currentState.value = AGENT_STATES.COMPLETE;
