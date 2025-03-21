@@ -122,6 +122,7 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue';
+import { useChat } from '~/composables/useChat';
 
 // Mock data for the current user
 const currentUser = ref({
@@ -133,11 +134,14 @@ const currentUser = ref({
 // Mock data for the active chat
 const activeChat = ref({
   id: 2,
-  name: 'John Doe',
+  name: 'Claude 3.7',
   avatar: 'https://i.pravatar.cc/150?img=2',
   isOnline: true,
   lastSeen: new Date()
 });
+
+// Use our chat composable
+const { isLoading, error, sendMessage: sendChatMessage, processStream } = useChat();
 
 // Message input text
 const messageText = ref('');
@@ -217,9 +221,10 @@ const formatTime = (timestamp) => {
 };
 
 // Function to send a new message
-const sendMessage = () => {
+const sendMessage = async () => {
   if (!messageText.value.trim()) return;
   
+  // Create and add the user message
   const newMessage = {
     id: messages.value.length + 1,
     content: messageText.value,
@@ -236,17 +241,61 @@ const sendMessage = () => {
     textareaRef.value.style.height = 'auto';
   }
   
-  // Simulate receiving a reply after 2 seconds
-  setTimeout(() => {
-    const reply = {
-      id: messages.value.length + 1,
-      content: 'Thanks for your message! This is an automated reply.',
-      timestamp: new Date(),
-      senderId: activeChat.value.id,
-      status: 'delivered'
-    };
-    messages.value.push(reply);
-  }, 2000);
+  // Create a placeholder for the assistant's response
+  const assistantMessage = {
+    id: messages.value.length + 1,
+    content: '',
+    timestamp: new Date(),
+    senderId: activeChat.value.id,
+    status: 'typing',
+    isStreaming: true
+  };
+  
+  // Add the placeholder message
+  messages.value.push(assistantMessage);
+  
+  // Prepare the messages for the API in Anthropic format
+  const apiMessages = [];
+  for (const msg of messages.value) {
+    // Skip the placeholder message
+    if (msg.id === assistantMessage.id) continue;
+    
+    apiMessages.push({
+      role: msg.senderId === currentUser.value.id ? 'user' : 'assistant',
+      content: msg.content
+    });
+  }
+  
+  try {
+    // Call the API with streaming
+    const response = await sendChatMessage(apiMessages, true);
+    
+    // Process the streaming response
+    await processStream(
+      response,
+      // On content
+      (content) => {
+        assistantMessage.content += content;
+      },
+      // On done
+      () => {
+        assistantMessage.isStreaming = false;
+        assistantMessage.status = 'delivered';
+      },
+      // On error
+      (errorMsg) => {
+        console.error('API error:', errorMsg);
+        assistantMessage.content = 'Sorry, an error occurred while generating a response.';
+        assistantMessage.isStreaming = false;
+        assistantMessage.status = 'error';
+      }
+    );
+  } catch (err) {
+    console.error('API call error:', err);
+    assistantMessage.content = 'Sorry, an error occurred while connecting to the server.';
+    assistantMessage.isStreaming = false;
+    assistantMessage.status = 'error';
+  }
 };
 
 // Handle Enter key to send the message (Shift+Enter for new line)

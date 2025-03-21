@@ -1,11 +1,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@layer components {
-  /* Custom component styles can go here */
-}
-
-@layer utilities {
-  /* Custom utility styles can go here */
-}

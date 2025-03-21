@@ -7,7 +7,7 @@
       class="max-w-[80%] rounded-3xl px-4 py-3 break-words"
       :class="messageClasses"
     >
-      <p>{{ message.content }}</p>
+      <p>{{ message.content }}<span v-if="message.isStreaming" class="animate-pulse">▋</span></p>
       <div 
         class="text-xs mt-1 flex items-center justify-end"
         :class="isOwn ? 'text-white/70' : 'text-gray-500'"
