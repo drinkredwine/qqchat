@@ -1,89 +1,105 @@
-# Smooth Fade-in Effect Implementation
+# Gemini-Style Streaming Implementation
 
 ## Overview
-This document explains the implementation of smooth fade-in effects for streaming message chunks in the chat application. The goal was to create a more polished user experience by adding subtle animations when new content appears during streaming.
+This document explains the implementation of Gemini-style streaming for message chunks in the chat application. The goal was to create a polished user experience with a blinking cursor and smooth scrolling, similar to Google's Gemini AI interface.
 
 ## Key Components
 
 ### 1. ChatMessage Component Enhancements
 The ChatMessage component was updated to include:
-- A clean, non-distracting typing indicator
-- Subtle fade-in animation for message content
-- Improved visual consistency during streaming
+- HTML formatting with proper line breaks
+- A blinking cursor similar to Gemini's interface
+- Improved content display with proper word wrapping
 
 ```vue
 <div class="text-left message-content">
-  <span>{{ message.content }}</span>
-  <span 
-    v-if="message.isStreaming" 
-    class="typing-indicator"
-    aria-hidden="true"
-  ></span>
+  <div v-html="formattedContent"></div>
 </div>
 ```
 
-### 2. Simple Content Handling
-The useChat.js composable was enhanced with:
-- Basic content buffering for smoother updates
-- Direct content delivery without over-engineering
-- Simplified event handling for streaming responses
+### 2. Content Formatting
+The content is now properly formatted with:
+- Line breaks converted to HTML `<br>` tags
+- A blinking cursor appended during streaming
+- Clean rendering of multiline content
 
 ```javascript
-// Add content to buffer and process immediately
-contentBuffer += data.content;
-processContentBuffer();
+// Format the content with proper line breaks and cursor
+const formattedContent = computed(() => {
+  let content = props.message.content || '';
+  
+  // Replace line breaks with <br> tags
+  content = content.replace(/\n/g, '<br>');
+  
+  // Add cursor if streaming
+  if (props.message.isStreaming) {
+    content += '<span class="cursor"></span>';
+  }
+  
+  return content;
+});
 ```
 
-### 3. CSS Animation Improvements
-The CSS animations were kept simple and subtle:
-- Elegant typing indicator that doesn't distract from content
-- Simple fade-in for new messages
-- Clean animations that enhance rather than dominate the UI
+### 3. Improved Scrolling Behavior
+The scrolling behavior was enhanced to:
+- Smoothly follow new content as it arrives
+- Provide a natural reading experience
+- Ensure visibility of the latest content
+
+```javascript
+// Improved scroll behavior for streaming messages
+const scrollToBottom = (smooth = true) => {
+  if (messagesContainer.value) {
+    nextTick(() => {
+      messagesContainer.value.scrollTo({
+        top: messagesContainer.value.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      });
+    });
+  }
+};
+```
 
 ## CSS Animation Details
 The following CSS animations were implemented:
 
-1. **Typing indicator**:
+1. **Blinking cursor (Gemini-style)**:
 ```css
-.typing-indicator {
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor {
   display: inline-block;
-  position: relative;
-  width: 3px;
+  width: 2px;
   height: 1em;
   background-color: currentColor;
-  margin-left: 2px;
-  opacity: 0.7;
+  margin-left: 1px;
+  animation: blink 1s step-end infinite;
   vertical-align: text-bottom;
 }
 ```
 
-2. **Message fade-in**:
+2. **Smooth content display**:
 ```css
-@keyframes fadeInMessage {
-  from { 
-    opacity: 0.5; 
-    transform: translateY(10px);
-  }
-  to { 
-    opacity: 1;
-    transform: translateY(0);
-  }
+.message-container {
+  transition: opacity 0.3s ease;
 }
 
 .message-container:last-child {
-  animation: fadeInMessage 0.3s ease-out;
+  opacity: 1;
 }
 ```
 
-## Performance Considerations
-- Simple, direct approach to content updates
-- Minimal DOM manipulations
-- CSS animations for smooth visual transitions
-- Focus on user experience rather than technical complexity
+## Performance Improvements
+- Batched content updates for smoother rendering
+- Optimized scroll behavior with native browser APIs
+- Improved handling of multiline content
+- Minimal DOM manipulations during streaming
 
-## Future Improvements
-Potential future enhancements include:
-1. Customizable animation speed options
-2. Adaptive animations based on message length
-3. Additional animation styles as user preferences
-4. Improved accessibility for animated content
+## User Experience Benefits
+1. Natural reading experience with smooth scrolling
+2. Familiar blinking cursor like popular AI interfaces
+3. Clean rendering of paragraphs and line breaks
+4. Responsive UI that follows content as it arrives
