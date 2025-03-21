@@ -16,8 +16,9 @@
       </button>
     </div>
     
-    <!-- Include our Tailwind demo component -->
+    <!-- Include our Tailwind demo components -->
     <TailwindCard />
+    <TailwindFeatures />
   </div>
 </template>
 
