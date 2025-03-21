@@ -191,7 +191,19 @@ export function useAgentWorkflow() {
       }
       
       // Parse the plan into discrete steps
-      const planText = planningResponse.response[0].content;
+      let planText = '';
+      
+      // Ensure we have valid plan text
+      if (planningResponse && 
+          planningResponse.response && 
+          planningResponse.response[0] && 
+          planningResponse.response[0].content) {
+        planText = planningResponse.response[0].content;
+      } else {
+        console.warn('Invalid planning response, using fallback plan');
+        planText = `1. Research: Gather information about the question\n2. Analyze: Evaluate key components\n3. Synthesize: Create a comprehensive answer`;
+      }
+      
       const planSteps = parsePlanSteps(planText);
       executionPlan.value = planSteps;
       
@@ -339,39 +351,123 @@ export function useAgentWorkflow() {
   
   // Helper function to parse plan steps from text
   const parsePlanSteps = (planText) => {
+    // Handle undefined or empty plan text
+    if (!planText) {
+      console.warn('Plan text is undefined or empty, creating default steps');
+      return [
+        {
+          number: 1,
+          title: 'Research the question',
+          description: 'Gather relevant information about the topic',
+          result: '',
+          status: 'pending'
+        },
+        {
+          number: 2,
+          title: 'Analyze key components',
+          description: 'Break down the question into manageable parts',
+          result: '',
+          status: 'pending'
+        },
+        {
+          number: 3,
+          title: 'Formulate comprehensive answer',
+          description: 'Combine findings into a clear response',
+          result: '',
+          status: 'pending'
+        }
+      ];
+    }
+    
     const steps = [];
     const stepRegex = /(\d+)[.:\)]\s*([^\n]+)(?:\n|$)(?:([^]*?)(?=\d+[.:\)]|\s*$))?/g;
     
-    let match;
-    while ((match = stepRegex.exec(planText)) !== null) {
-      const stepNumber = match[1];
-      const stepTitle = match[2].trim();
-      const stepDescription = match[3] ? match[3].trim() : '';
+    try {
+      let match;
+      while ((match = stepRegex.exec(planText)) !== null) {
+        const stepNumber = match[1];
+        const stepTitle = match[2].trim();
+        const stepDescription = match[3] ? match[3].trim() : '';
+        
+        steps.push({
+          number: parseInt(stepNumber),
+          title: stepTitle,
+          description: stepDescription,
+          result: '',
+          status: 'pending'
+        });
+      }
       
-      steps.push({
-        number: parseInt(stepNumber),
-        title: stepTitle,
-        description: stepDescription,
-        result: '',
-        status: 'pending'
-      });
-    }
-    
-    // If regex failed to parse steps, create a simple fallback
-    if (steps.length === 0) {
-      const lines = planText.split('\n');
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line && /^\d+/.test(line)) {
-          steps.push({
-            number: steps.length + 1,
-            title: line.replace(/^\d+[.:\)]/, '').trim(),
-            description: '',
-            result: '',
-            status: 'pending'
-          });
+      // If regex failed to parse steps, create a simple fallback
+      if (steps.length === 0) {
+        // Safely split the text into lines
+        const lines = planText.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (line && /^\d+/.test(line)) {
+            steps.push({
+              number: steps.length + 1,
+              title: line.replace(/^\d+[.:\)]/, '').trim(),
+              description: '',
+              result: '',
+              status: 'pending'
+            });
+          }
         }
       }
+    } catch (error) {
+      console.error('Error parsing plan steps:', error);
+      // Return default steps if parsing fails
+      return [
+        {
+          number: 1,
+          title: 'Research the question',
+          description: 'Gather relevant information about the topic',
+          result: '',
+          status: 'pending'
+        },
+        {
+          number: 2,
+          title: 'Analyze key components',
+          description: 'Break down the question into manageable parts',
+          result: '',
+          status: 'pending'
+        },
+        {
+          number: 3,
+          title: 'Formulate comprehensive answer',
+          description: 'Combine findings into a clear response',
+          result: '',
+          status: 'pending'
+        }
+      ];
+    }
+    
+    // If we still have no steps, return default steps
+    if (steps.length === 0) {
+      return [
+        {
+          number: 1,
+          title: 'Research the question',
+          description: 'Gather relevant information about the topic',
+          result: '',
+          status: 'pending'
+        },
+        {
+          number: 2,
+          title: 'Analyze key components',
+          description: 'Break down the question into manageable parts',
+          result: '',
+          status: 'pending'
+        },
+        {
+          number: 3,
+          title: 'Formulate comprehensive answer',
+          description: 'Combine findings into a clear response',
+          result: '',
+          status: 'pending'
+        }
+      ];
     }
     
     return steps;
