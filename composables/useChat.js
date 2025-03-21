@@ -67,13 +67,22 @@ export function useChat() {
       const decoder = new TextDecoder();
       let buffer = '';
       let eventCount = 0;
-      let contentBuffer = ''; // Simple buffer for content
+      let contentBuffer = ''; // Buffer for content
+      let bufferTimer = null;
+      const BUFFER_DELAY = 30; // Small delay for smoother updates
       
-      // Function to process buffered content
+      // Function to process buffered content with a slight delay for smoother updates
       const processContentBuffer = () => {
         if (contentBuffer.length > 0) {
-          onContent(contentBuffer);
-          contentBuffer = '';
+          // Clear any existing timer
+          if (bufferTimer) clearTimeout(bufferTimer);
+          
+          // Set a short timeout to batch updates
+          bufferTimer = setTimeout(() => {
+            onContent(contentBuffer);
+            contentBuffer = '';
+            bufferTimer = null;
+          }, BUFFER_DELAY);
         }
       };
       

@@ -8,12 +8,7 @@
       :class="messageClasses"
     >
       <div class="text-left message-content">
-        <span>{{ message.content }}</span>
-        <span 
-          v-if="message.isStreaming" 
-          class="typing-indicator"
-          aria-hidden="true"
-        ></span>
+        <div v-html="formattedContent"></div>
       </div>
       <div 
         class="text-xs mt-1 flex items-center"
@@ -51,7 +46,20 @@ const props = defineProps({
   }
 });
 
-// No need to track chunks separately as we'll use CSS for the animation
+// Format the content with proper line breaks and cursor
+const formattedContent = computed(() => {
+  let content = props.message.content || '';
+  
+  // Replace line breaks with <br> tags
+  content = content.replace(/\n/g, '<br>');
+  
+  // Add cursor if streaming
+  if (props.message.isStreaming) {
+    content += '<span class="cursor"></span>';
+  }
+  
+  return content;
+});
 
 // Compute classes for message bubble based on whether it's the user's message or not
 const messageClasses = computed(() => {
@@ -69,32 +77,31 @@ const formatTime = (timestamp) => {
 };
 </script>
 
-<style scoped>
-/* Message content with fade-in for new text */
+<style>
+/* Message content styling */
 .message-content {
   position: relative;
+  line-height: 1.5;
 }
 
-/* Typing indicator that doesn't blink at the end of text */
-.typing-indicator {
+/* Cursor animation like Gemini */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor {
   display: inline-block;
-  position: relative;
-  width: 3px;
+  width: 2px;
   height: 1em;
   background-color: currentColor;
-  margin-left: 2px;
-  opacity: 0.7;
+  margin-left: 1px;
+  animation: blink 1s step-end infinite;
   vertical-align: text-bottom;
 }
 
-/* Subtle fade-in for new content */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* Apply animation to the entire message when content changes */
-.message-content:has(span:not(:empty)) {
-  animation: fadeIn 0.2s ease-out;
+/* Ensure smooth text rendering */
+.message-content div {
+  word-break: break-word;
 }
 </style>

@@ -315,15 +315,32 @@ const resizeTextarea = () => {
 // Watch for changes in message text to resize textarea
 watch(messageText, resizeTextarea);
 
-// Scroll to bottom of messages when new messages are added or content changes
+// Improved scroll behavior for streaming messages
+const scrollToBottom = (smooth = true) => {
+  if (messagesContainer.value) {
+    nextTick(() => {
+      messagesContainer.value.scrollTo({
+        top: messagesContainer.value.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      });
+    });
+  }
+};
+
+// Scroll when messages are added
 watch(messages, () => {
-  // Use nextTick to ensure DOM has updated before scrolling
-  nextTick(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
-    }
-  });
+  scrollToBottom();
 }, { deep: true, immediate: true });
+
+// Also watch for content changes in the last message to ensure smooth scrolling during streaming
+watch(() => {
+  if (messages.value.length > 0) {
+    return messages.value[messages.value.length - 1].content;
+  }
+  return null;
+}, () => {
+  scrollToBottom(true);
+});
 
 onMounted(() => {
   // Focus the textarea when component is mounted
@@ -332,32 +349,29 @@ onMounted(() => {
   }
   
   // Scroll to bottom of messages on initial load
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
-  }
+  scrollToBottom(false);
 });
 </script>
 
 <style scoped>
-/* New message fade-in animation */
-@keyframes fadeInMessage {
-  from { 
-    opacity: 0.5; 
-    transform: translateY(10px);
-  }
-  to { 
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* New message animation similar to Gemini */
+.message-container {
+  transition: opacity 0.3s ease;
 }
 
 .message-container:last-child {
-  animation: fadeInMessage 0.3s ease-out;
+  opacity: 1;
 }
 
-/* Smooth scrolling for the messages container */
+/* Optimized scrolling for the messages container */
 .overflow-y-auto {
   scroll-behavior: smooth;
   overscroll-behavior: contain;
+  padding-bottom: 10px;
+}
+
+/* Improved spacing for better readability */
+.mb-4:not(:last-child) {
+  margin-bottom: 1.5rem;
 }
 </style>
