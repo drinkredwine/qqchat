@@ -62,6 +62,9 @@
           <p class="text-xs text-gray-500 truncate">
             {{ contact.lastMessage?.content || 'No messages yet' }}
           </p>
+          <p class="text-xs text-blue-600 truncate mt-1">
+            <span class="font-medium">Specialty:</span> {{ contact.specialty }}
+          </p>
         </div>
       </div>
     </div>
@@ -70,102 +73,18 @@
 
 <script setup>
 import { ref, defineEmits } from 'vue';
+import { usePersonas } from '~/composables/usePersonas';
 
 const emit = defineEmits(['select-contact']);
 
-// Current user
-const currentUser = ref({
-  id: 1,
-  name: 'Current User',
-  avatar: 'https://i.pravatar.cc/150?img=1'
-});
+// Get personas and current user from the composable
+const { personas, currentUser } = usePersonas();
 
-// Contact list data
-const contacts = ref([
-  {
-    id: 2,
-    name: 'Claude 3.7',
-    avatar: 'https://i.pravatar.cc/150?img=2',
-    isOnline: true,
-    lastMessage: {
-      content: 'It\'s a web application with a modern chat interface.',
-      timestamp: new Date(Date.now() - 1200000),
-    }
-  },
-  {
-    id: 3,
-    name: 'Claude 3 Opus',
-    avatar: 'https://i.pravatar.cc/150?img=3',
-    isOnline: true,
-    lastMessage: {
-      content: 'I can help you with that research project.',
-      timestamp: new Date(Date.now() - 3600000),
-    }
-  },
-  {
-    id: 4,
-    name: 'Claude 3 Sonnet',
-    avatar: 'https://i.pravatar.cc/150?img=4',
-    isOnline: false,
-    lastMessage: {
-      content: 'Let me check those calculations for you.',
-      timestamp: new Date(Date.now() - 86400000),
-    }
-  },
-  {
-    id: 5,
-    name: 'Claude 3 Haiku',
-    avatar: 'https://i.pravatar.cc/150?img=5',
-    isOnline: true,
-    lastMessage: {
-      content: 'Simple answers, quickly delivered.',
-      timestamp: new Date(Date.now() - 172800000),
-    }
-  },
-  {
-    id: 6,
-    name: 'GPT-4',
-    avatar: 'https://i.pravatar.cc/150?img=6',
-    isOnline: true,
-    lastMessage: {
-      content: 'I can generate some code examples for you.',
-      timestamp: new Date(Date.now() - 259200000),
-    }
-  },
-  {
-    id: 7,
-    name: 'GPT-3.5',
-    avatar: 'https://i.pravatar.cc/150?img=7',
-    isOnline: false,
-    lastMessage: {
-      content: 'Here\'s a quick summary of that article.',
-      timestamp: new Date(Date.now() - 345600000),
-    }
-  },
-  {
-    id: 8,
-    name: 'Gemini Pro',
-    avatar: 'https://i.pravatar.cc/150?img=8',
-    isOnline: true,
-    lastMessage: {
-      content: 'I can analyze that data for patterns.',
-      timestamp: new Date(Date.now() - 432000000),
-    }
-  },
-  {
-    id: 9,
-    name: 'Llama 3',
-    avatar: 'https://i.pravatar.cc/150?img=9',
-    isOnline: false,
-    lastMessage: {
-      content: 'Open-source models are improving rapidly.',
-      timestamp: new Date(Date.now() - 518400000),
-    }
-  }
-]);
+// Use personas as contacts
+const contacts = personas;
 
 // Currently active contact
-const activeContact = ref(contacts.value[0]);
+const activeContact = ref(contacts[0]);
 
 // Select a contact
 const selectContact = (contact) => {

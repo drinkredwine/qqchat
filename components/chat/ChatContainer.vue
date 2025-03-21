@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col h-full w-full bg-white overflow-hidden">
-    <!-- Chat header - minimal version -->
+    <!-- Chat header - minimal version with personality -->
     <div class="flex items-center p-3 border-b border-gray-200 bg-white">
       <div class="relative mr-3">
         <img 
@@ -15,9 +15,14 @@
       </div>
       <div class="flex-1">
         <h3 class="text-base font-medium text-gray-800">{{ activeChat.name }}</h3>
-        <p class="text-xs text-gray-500">
-          {{ activeChat.isOnline ? 'Online' : formatLastSeen(activeChat.lastSeen) }}
-        </p>
+        <div class="flex items-center">
+          <p class="text-xs text-gray-500 mr-2">
+            {{ activeChat.isOnline ? 'Online' : formatLastSeen(activeChat.lastSeen) }}
+          </p>
+          <span class="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full">
+            {{ activeChat.personality }}
+          </span>
+        </div>
       </div>
     </div>
     
@@ -79,6 +84,7 @@
 <script setup>
 import { ref, onMounted, watch, nextTick, computed } from 'vue';
 import { useChat } from '~/composables/useChat';
+import { usePersonas } from '~/composables/usePersonas';
 import ChatMessage from './ChatMessage.vue';
 
 const props = defineProps({
@@ -95,55 +101,17 @@ const props = defineProps({
 // Use our chat composable
 const { isLoading, error, sendMessage: sendChatMessage, processStream } = useChat();
 
+// Use the personas composable
+const { addMessageToPersona, generatePersonaResponse } = usePersonas();
+
 // Message input text
 const messageText = ref('');
 const textareaRef = ref(null);
 
-// Mock messages data
-const messages = ref([
-  {
-    id: 1,
-    content: 'Hey there! How are you doing today?',
-    timestamp: new Date(Date.now() - 3600000),
-    senderId: 2,
-    status: 'read'
-  },
-  {
-    id: 2,
-    content: 'I\'m doing great, thanks for asking! How about you?',
-    timestamp: new Date(Date.now() - 3000000),
-    senderId: 1,
-    status: 'read'
-  },
-  {
-    id: 3,
-    content: 'Pretty good! Just working on this new project. It\'s coming along nicely.',
-    timestamp: new Date(Date.now() - 2400000),
-    senderId: 2,
-    status: 'read'
-  },
-  {
-    id: 4,
-    content: 'That sounds interesting! What kind of project is it?',
-    timestamp: new Date(Date.now() - 1800000),
-    senderId: 1,
-    status: 'read'
-  },
-  {
-    id: 5,
-    content: 'It\'s a web application with a modern chat interface, similar to Facebook Messenger.',
-    timestamp: new Date(Date.now() - 1200000),
-    senderId: 2,
-    status: 'read'
-  },
-  {
-    id: 6,
-    content: 'That sounds awesome! I\'d love to see it when it\'s ready.',
-    timestamp: new Date(Date.now() - 600000),
-    senderId: 1,
-    status: 'delivered'
-  }
-]);
+// Use the messages from the active chat persona
+const messages = computed(() => {
+  return props.activeChat?.messages || [];
+});
 
 const messagesContainer = ref(null);
 
@@ -176,7 +144,7 @@ const formatTime = (timestamp) => {
 const sendMessage = async () => {
   if (!messageText.value.trim()) return;
   
-  // Create and add the user message
+  // Create the user message
   const newMessage = {
     id: messages.value.length + 1,
     content: messageText.value,
@@ -185,8 +153,8 @@ const sendMessage = async () => {
     status: 'sent'
   };
   
-  // Add the user message
-  messages.value.push(newMessage);
+  // Add the user message to the current persona's messages
+  addMessageToPersona(props.activeChat.id, newMessage);
   messageText.value = '';
   
   // Reset textarea height
@@ -194,18 +162,16 @@ const sendMessage = async () => {
     textareaRef.value.style.height = 'auto';
   }
   
-  // Immediately create and add a placeholder for the assistant's response
-  const assistantMessage = {
-    id: messages.value.length + 1,
-    content: '',
-    timestamp: new Date(),
-    senderId: props.activeChat.id,
-    status: 'typing',
-    isStreaming: true
-  };
+  // Generate a response based on the persona's personality
+  const assistantMessage = generatePersonaResponse(props.activeChat.id, newMessage.content);
+  
+  // Set the message as streaming
+  assistantMessage.isStreaming = true;
+  assistantMessage.status = 'typing';
+  assistantMessage.content = '';
   
   // Add the placeholder message immediately
-  messages.value.push(assistantMessage);
+  addMessageToPersona(props.activeChat.id, assistantMessage);
   
   // Ensure the UI updates before making the API call
   await nextTick();
@@ -231,7 +197,7 @@ const sendMessage = async () => {
       response,
       // On content
       (content) => {
-        // Simple, direct update for better performance
+        // Find the assistant message in the current persona's messages
         const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
         if (index !== -1) {
           // Create a new object to trigger Vue reactivity
@@ -240,38 +206,47 @@ const sendMessage = async () => {
           // Ensure content is initialized and append new content
           updatedMessage.content = (updatedMessage.content || '') + content;
           
-          // Replace the message in the array to trigger reactivity
-          messages.value.splice(index, 1, updatedMessage);
-          
-          // Force a reactive update by also updating the reference
-          assistantMessage.content = updatedMessage.content;
+          // Update the message in the persona's messages array
+          props.activeChat.messages.splice(index, 1, updatedMessage);
           
           // Debug: log content updates
           console.log(`Updated content: "${updatedMessage.content.substring(0, 50)}${updatedMessage.content.length > 50 ? '...' : ''}"`);
-        } else {
-          // Fallback to direct modification if message not found
-          assistantMessage.content = (assistantMessage.content || '') + content;
-          console.log(`Fallback update: "${assistantMessage.content.substring(0, 50)}${assistantMessage.content.length > 50 ? '...' : ''}"`);
         }
       },
       // On done
       () => {
-        assistantMessage.isStreaming = false;
-        assistantMessage.status = 'delivered';
+        // Find the message again as the index might have changed
+        const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+        if (index !== -1) {
+          const updatedMessage = { ...messages.value[index] };
+          updatedMessage.isStreaming = false;
+          updatedMessage.status = 'delivered';
+          props.activeChat.messages.splice(index, 1, updatedMessage);
+        }
       },
       // On error
       (errorMsg) => {
         console.error('API error:', errorMsg);
-        assistantMessage.content = 'Sorry, an error occurred while generating a response.';
-        assistantMessage.isStreaming = false;
-        assistantMessage.status = 'error';
+        const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+        if (index !== -1) {
+          const updatedMessage = { ...messages.value[index] };
+          updatedMessage.content = 'Sorry, an error occurred while generating a response.';
+          updatedMessage.isStreaming = false;
+          updatedMessage.status = 'error';
+          props.activeChat.messages.splice(index, 1, updatedMessage);
+        }
       }
     );
   } catch (err) {
     console.error('API call error:', err);
-    assistantMessage.content = 'Sorry, an error occurred while connecting to the server.';
-    assistantMessage.isStreaming = false;
-    assistantMessage.status = 'error';
+    const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+    if (index !== -1) {
+      const updatedMessage = { ...messages.value[index] };
+      updatedMessage.content = 'Sorry, an error occurred while connecting to the server.';
+      updatedMessage.isStreaming = false;
+      updatedMessage.status = 'error';
+      props.activeChat.messages.splice(index, 1, updatedMessage);
+    }
   }
 };
 

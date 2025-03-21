@@ -19,22 +19,13 @@
 import { ref } from 'vue';
 import ChatSidebar from './ChatSidebar.vue';
 import ChatContainer from './ChatContainer.vue';
+import { usePersonas } from '~/composables/usePersonas';
 
-// Current user data
-const currentUser = ref({
-  id: 1,
-  name: 'Current User',
-  avatar: 'https://i.pravatar.cc/150?img=1'
-});
+// Get personas and current user from the composable
+const { personas, currentUser, getPersonaById } = usePersonas();
 
 // Active contact (default to Claude 3.7)
-const activeContact = ref({
-  id: 2,
-  name: 'Claude 3.7',
-  avatar: 'https://i.pravatar.cc/150?img=2',
-  isOnline: true,
-  lastSeen: new Date()
-});
+const activeContact = ref(getPersonaById(2));
 
 // Handle contact selection from sidebar
 const handleContactSelect = (contact) => {
