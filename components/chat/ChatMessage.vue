@@ -7,10 +7,10 @@
       class="max-w-[80%] rounded-3xl px-4 py-3 break-words"
       :class="messageClasses"
     >
-      <p>{{ message.content }}<span v-if="message.isStreaming" class="animate-pulse">▋</span></p>
+      <p class="text-left">{{ message.content }}<span v-if="message.isStreaming" class="animate-pulse">▋</span></p>
       <div 
-        class="text-xs mt-1 flex items-center justify-end"
-        :class="isOwn ? 'text-white/70' : 'text-gray-500'"
+        class="text-xs mt-1 flex items-center"
+        :class="isOwn ? 'text-white/70 justify-end' : 'text-gray-500 justify-start'"
       >
         {{ formatTime(message.timestamp) }}
         <span v-if="isOwn" class="ml-1">

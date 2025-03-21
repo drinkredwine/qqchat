@@ -51,10 +51,12 @@
               ? 'bg-blue-600 text-white rounded-br-none shadow-md' 
               : 'bg-gray-200 text-gray-800 rounded-bl-none shadow'"
           >
-            <p>{{ message.content }}</p>
+            <p class="text-left">{{ message.content }}</p>
             <div 
-              class="text-xs mt-1 flex items-center justify-end"
-              :class="message.senderId === currentUser.id ? 'text-white/70' : 'text-gray-500'"
+              class="text-xs mt-1 flex items-center"
+              :class="[
+                message.senderId === currentUser.id ? 'text-white/70 justify-end' : 'text-gray-500 justify-start'
+              ]"
             >
               {{ formatTime(message.timestamp) }}
               <span v-if="message.senderId === currentUser.id" class="ml-1">
@@ -121,7 +123,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, nextTick } from 'vue';
 import { useChat } from '~/composables/useChat';
 
 // Mock data for the current user
@@ -233,6 +235,7 @@ const sendMessage = async () => {
     status: 'sent'
   };
   
+  // Add the user message
   messages.value.push(newMessage);
   messageText.value = '';
   
@@ -241,7 +244,7 @@ const sendMessage = async () => {
     textareaRef.value.style.height = 'auto';
   }
   
-  // Create a placeholder for the assistant's response
+  // Immediately create and add a placeholder for the assistant's response
   const assistantMessage = {
     id: messages.value.length + 1,
     content: '',
@@ -251,8 +254,11 @@ const sendMessage = async () => {
     isStreaming: true
   };
   
-  // Add the placeholder message
+  // Add the placeholder message immediately
   messages.value.push(assistantMessage);
+  
+  // Ensure the UI updates before making the API call
+  await nextTick();
   
   // Prepare the messages for the API in Anthropic format
   const apiMessages = [];
@@ -275,7 +281,27 @@ const sendMessage = async () => {
       response,
       // On content
       (content) => {
-        assistantMessage.content += content;
+        // Use Vue's reactivity to ensure UI updates
+        // We need to create a new object to trigger reactivity
+        const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+        if (index !== -1) {
+          // Create a new object to trigger Vue reactivity
+          const updatedMessage = { ...messages.value[index] };
+          // Ensure content is initialized and append new content
+          updatedMessage.content = (updatedMessage.content || '') + content;
+          // Replace the message in the array to trigger reactivity
+          messages.value.splice(index, 1, updatedMessage);
+          
+          // Force a reactive update by also updating the reference
+          assistantMessage.content = updatedMessage.content;
+          
+          // Debug: log content updates
+          console.log(`Updated content: "${updatedMessage.content.substring(0, 50)}${updatedMessage.content.length > 50 ? '...' : ''}"`);
+        } else {
+          // Fallback to direct modification if message not found
+          assistantMessage.content = (assistantMessage.content || '') + content;
+          console.log(`Fallback update: "${assistantMessage.content.substring(0, 50)}${assistantMessage.content.length > 50 ? '...' : ''}"`);
+        }
       },
       // On done
       () => {
@@ -316,14 +342,15 @@ const resizeTextarea = () => {
 // Watch for changes in message text to resize textarea
 watch(messageText, resizeTextarea);
 
-// Scroll to bottom of messages when new messages are added
+// Scroll to bottom of messages when new messages are added or content changes
 watch(messages, () => {
-  setTimeout(() => {
+  // Use nextTick to ensure DOM has updated before scrolling
+  nextTick(() => {
     if (messagesContainer.value) {
       messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
     }
-  }, 50);
-}, { deep: true });
+  });
+}, { deep: true, immediate: true });
 
 onMounted(() => {
   // Focus the textarea when component is mounted
