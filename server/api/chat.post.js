@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
 
     // For non-streaming responses
     const response = await anthropic.messages.create({
-      model: 'claude-3-7-sonnet-20240620',
+      model: 'claude-3-7-sonnet-20250219',
       max_tokens: 4096,
       messages: messages,
       temperature: 0.7,
@@ -68,7 +68,7 @@ const streamResponse = async (event, anthropic, messages) => {
     });
 
     const stream = await anthropic.messages.create({
-      model: 'claude-3-7-sonnet-20240620',
+      model: 'claude-3-7-sonnet-20250219',
       max_tokens: 4096,
       messages: messages,
       temperature: 0.7,
