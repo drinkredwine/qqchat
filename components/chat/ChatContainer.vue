@@ -256,8 +256,8 @@ const sendMessage = async () => {
           updatedMessage.status = 'delivered';
         } else {
           // Last resort fallback
-          updatedMessage.content = 'Based on my analysis, I've processed your complex question. ' + 
-            'The key points have been identified and a comprehensive answer has been formulated. ' +
+          updatedMessage.content = 'Based on my analysis, I\'ve processed your complex question. ' + 
+            'The key points have been identified and a comprehensive answer has been formulated. ' + 
             'Please let me know if you need any clarification or have additional questions.';
           updatedMessage.isStreaming = false;
           updatedMessage.status = 'delivered';
