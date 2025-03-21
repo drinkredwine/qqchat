@@ -68,10 +68,15 @@ const processMarkdown = async (content) => {
       return code;
     },
     breaks: true,
-    gfm: true
+    gfm: true,
+    // Treat all messages as markdown
+    headerIds: true,
+    mangle: false
   });
   
   try {
+    // Ensure content is treated as markdown even if it doesn't have explicit markdown syntax
+    // This will allow regular text to be rendered with proper formatting
     return marked(content);
   } catch (error) {
     console.error('Error parsing markdown:', error);
@@ -201,11 +206,30 @@ const handleResize = () => {
 .monaco-markdown-viewer pre {
   border-radius: 0.375rem;
   margin: 0.5rem 0;
+  padding: 0.75rem;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.own-message .monaco-markdown-viewer pre {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .monaco-markdown-viewer code {
   font-family: 'Fira Code', monospace;
   font-size: 0.9em;
+}
+
+/* Style for inline code */
+.monaco-markdown-viewer p code {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.9em;
+}
+
+.own-message .monaco-markdown-viewer p code {
+  background-color: rgba(255, 255, 255, 0.15);
 }
 
 /* Style for headings */
@@ -218,12 +242,42 @@ const handleResize = () => {
   margin-top: 1rem;
   margin-bottom: 0.5rem;
   font-weight: 600;
+  line-height: 1.3;
+}
+
+.monaco-markdown-viewer h1 {
+  font-size: 1.5em;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 0.3rem;
+}
+
+.monaco-markdown-viewer h2 {
+  font-size: 1.3em;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 0.2rem;
+}
+
+.monaco-markdown-viewer h3 {
+  font-size: 1.2em;
+}
+
+.monaco-markdown-viewer h4 {
+  font-size: 1.1em;
+}
+
+.own-message .monaco-markdown-viewer h1,
+.own-message .monaco-markdown-viewer h2 {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* Style for links */
 .monaco-markdown-viewer a {
   color: #3b82f6;
   text-decoration: underline;
+}
+
+.own-message .monaco-markdown-viewer a {
+  color: #93c5fd;
 }
 
 /* Style for lists */
@@ -233,12 +287,32 @@ const handleResize = () => {
   margin: 0.5rem 0;
 }
 
+.monaco-markdown-viewer li {
+  margin: 0.25rem 0;
+}
+
 /* Style for blockquotes */
 .monaco-markdown-viewer blockquote {
-  border-left: 4px solid #d1d5db;
+  border-left: 4px solid rgba(0, 0, 0, 0.1);
   padding-left: 1rem;
   margin: 0.5rem 0;
-  color: #6b7280;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.own-message .monaco-markdown-viewer blockquote {
+  border-left: 4px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Style for horizontal rules */
+.monaco-markdown-viewer hr {
+  border: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  margin: 1rem 0;
+}
+
+.own-message .monaco-markdown-viewer hr {
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* Style for tables */
@@ -250,11 +324,30 @@ const handleResize = () => {
 
 .monaco-markdown-viewer th,
 .monaco-markdown-viewer td {
-  border: 1px solid #d1d5db;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   padding: 0.5rem;
 }
 
 .monaco-markdown-viewer th {
-  background-color: #f3f4f6;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.own-message .monaco-markdown-viewer th,
+.own-message .monaco-markdown-viewer td {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.own-message .monaco-markdown-viewer th {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Ensure proper spacing for paragraphs */
+.monaco-markdown-viewer p {
+  margin: 0.5rem 0;
+}
+
+/* Fix cursor in editor */
+.monaco-editor .cursor {
+  display: none !important;
 }
 </style>

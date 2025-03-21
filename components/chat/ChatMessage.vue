@@ -8,10 +8,9 @@
       :class="messageClasses"
     >
       <div class="text-left message-content">
-        <!-- Use Monaco Editor for messages with code blocks or markdown (client-only) -->
+        <!-- Use Monaco Editor for all messages (client-only) -->
         <ClientOnly>
           <MonacoMarkdownViewer 
-            v-if="hasMarkdownOrCode"
             :content="message.content"
             :theme="editorTheme"
             :isOwn="isOwn"
@@ -20,8 +19,6 @@
             <div v-html="formattedContent" class="fallback-content"></div>
           </template>
         </ClientOnly>
-        <!-- Use simple formatting for regular messages -->
-        <div v-if="!hasMarkdownOrCode" v-html="formattedContent"></div>
       </div>
       <div 
         class="text-xs mt-1 flex items-center"
@@ -60,21 +57,7 @@ const props = defineProps({
   }
 });
 
-// Determine if the message contains markdown or code blocks
-const hasMarkdownOrCode = computed(() => {
-  const content = props.message.content || '';
-  
-  // Check for common markdown patterns
-  const hasMarkdown = /(\#{1,6}\s|\*\*|\*|\_|\~\~|\`\`\`|\`|\>\s|\-\s|\+\s|\d+\.\s|\[.*\]\(.*\)|\!\[.*\]\(.*\)|\|[\s\S]*\|)/.test(content);
-  
-  // Check for code blocks
-  const hasCodeBlock = /```[\s\S]*?```/.test(content);
-  
-  // Check for inline code
-  const hasInlineCode = /`[^`]+`/.test(content);
-  
-  return hasMarkdown || hasCodeBlock || hasInlineCode;
-});
+// We're now using Monaco Editor for all messages, so we don't need to check for markdown or code
 
 // Format the content with proper line breaks only (for non-markdown messages)
 const formattedContent = computed(() => {
