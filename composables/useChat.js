@@ -14,6 +14,11 @@ export function useChat() {
     isLoading.value = true;
     error.value = null;
     
+    console.log('Sending message to API:', {
+      messageCount: messages.length,
+      stream
+    });
+    
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -56,10 +61,12 @@ export function useChat() {
    * @param {Function} onError - Callback for errors
    */
   const processStream = async (response, onContent, onDone, onError) => {
+    console.log('Processing stream response');
     try {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let eventCount = 0;
       
       while (true) {
         const { done, value } = await reader.read();
@@ -77,12 +84,18 @@ export function useChat() {
             try {
               const data = JSON.parse(line.slice(6));
               
+              eventCount++;
+              console.log(`Received event #${eventCount}, type: ${data.type}`);
+              
               if (data.type === 'content' && data.content) {
+                console.log(`Content chunk: ${data.content.substring(0, 20)}...`);
                 onContent(data.content);
               } else if (data.type === 'done') {
+                console.log('Received done event');
                 onDone();
                 return;
               } else if (data.type === 'error') {
+                console.log('Received error:', data.error);
                 onError(data.error);
                 return;
               }
