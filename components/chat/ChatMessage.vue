@@ -46,17 +46,12 @@ const props = defineProps({
   }
 });
 
-// Format the content with proper line breaks and cursor
+// Format the content with proper line breaks only
 const formattedContent = computed(() => {
   let content = props.message.content || '';
   
   // Replace line breaks with <br> tags
   content = content.replace(/\n/g, '<br>');
-  
-  // Add cursor if streaming
-  if (props.message.isStreaming) {
-    content += '<span class="cursor"></span>';
-  }
   
   return content;
 });
@@ -84,21 +79,7 @@ const formatTime = (timestamp) => {
   line-height: 1.5;
 }
 
-/* Cursor animation like Gemini */
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-.cursor {
-  display: inline-block;
-  width: 2px;
-  height: 1em;
-  background-color: currentColor;
-  margin-left: 1px;
-  animation: blink 1s step-end infinite;
-  vertical-align: text-bottom;
-}
+/* No cursor animation needed */
 
 /* Ensure smooth text rendering */
 .message-content div {
