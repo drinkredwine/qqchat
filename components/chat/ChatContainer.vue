@@ -283,12 +283,22 @@ const sendMessage = async () => {
         // We need to create a new object to trigger reactivity
         const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
         if (index !== -1) {
+          // Create a new object to trigger Vue reactivity
           const updatedMessage = { ...messages.value[index] };
+          // Ensure content is initialized and append new content
           updatedMessage.content = (updatedMessage.content || '') + content;
+          // Replace the message in the array to trigger reactivity
           messages.value.splice(index, 1, updatedMessage);
+          
+          // Force a reactive update by also updating the reference
+          assistantMessage.content = updatedMessage.content;
+          
+          // Debug: log content updates
+          console.log(`Updated content: "${updatedMessage.content.substring(0, 50)}${updatedMessage.content.length > 50 ? '...' : ''}"`);
         } else {
           // Fallback to direct modification if message not found
           assistantMessage.content = (assistantMessage.content || '') + content;
+          console.log(`Fallback update: "${assistantMessage.content.substring(0, 50)}${assistantMessage.content.length > 50 ? '...' : ''}"`);
         }
       },
       // On done
