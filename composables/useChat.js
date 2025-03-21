@@ -67,16 +67,13 @@ export function useChat() {
       const decoder = new TextDecoder();
       let buffer = '';
       let eventCount = 0;
-      let contentBuffer = ''; // Buffer to accumulate content for smoother updates
-      let lastProcessTime = 0;
-      const CHUNK_THROTTLE_MS = 50; // Throttle updates for smoother animation
+      let contentBuffer = ''; // Simple buffer for content
       
-      // Function to process buffered content with throttling
+      // Function to process buffered content
       const processContentBuffer = () => {
         if (contentBuffer.length > 0) {
           onContent(contentBuffer);
           contentBuffer = '';
-          lastProcessTime = Date.now();
         }
       };
       
@@ -104,14 +101,9 @@ export function useChat() {
                 console.log(`Content chunk: "${contentPreview}${data.content.length > 30 ? '...' : ''}" (length: ${data.content.length})`);
                 // Make sure we're not working with undefined content
                 if (data.content) {
-                  // Add to buffer instead of immediately sending
+                  // Add to buffer and process immediately
                   contentBuffer += data.content;
-                  
-                  // Process buffer if it's getting large or if enough time has passed
-                  const now = Date.now();
-                  if (contentBuffer.length > 100 || (now - lastProcessTime) > CHUNK_THROTTLE_MS) {
-                    processContentBuffer();
-                  }
+                  processContentBuffer();
                 } else {
                   console.warn('Received empty content chunk');
                 }
@@ -133,9 +125,8 @@ export function useChat() {
           }
         }
         
-        // Process accumulated content periodically even if no complete messages
-        const now = Date.now();
-        if (contentBuffer.length > 0 && (now - lastProcessTime) > CHUNK_THROTTLE_MS) {
+        // Process any accumulated content immediately
+        if (contentBuffer.length > 0) {
           processContentBuffer();
         }
       }

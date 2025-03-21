@@ -40,14 +40,12 @@
     
     <!-- Chat messages area -->
     <div class="flex-1 p-4 overflow-y-auto bg-gray-50" ref="messagesContainer">
-      <transition-group name="message-fade" tag="div">
-        <div v-for="(message, index) in messages" :key="message.id || index" class="mb-4">
-          <ChatMessage 
-            :message="message" 
-            :isOwn="message.senderId === currentUser.id" 
-          />
-        </div>
-      </transition-group>
+      <div v-for="(message, index) in messages" :key="message.id || index" class="mb-4 message-container">
+        <ChatMessage 
+          :message="message" 
+          :isOwn="message.senderId === currentUser.id" 
+        />
+      </div>
     </div>
     
     <!-- Chat input -->
@@ -255,38 +253,28 @@ const sendMessage = async () => {
       response,
       // On content
       (content) => {
-        // Debounce updates for smoother animation
-        const updateMessageContent = () => {
-          // Find the message in the array
-          const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
-          if (index !== -1) {
-            // Create a new object to trigger Vue reactivity
-            const updatedMessage = { ...messages.value[index] };
-            
-            // Ensure content is initialized and append new content
-            updatedMessage.content = (updatedMessage.content || '') + content;
-            
-            // Add the chunk length to track animation timing
-            updatedMessage.lastChunkLength = content.length;
-            updatedMessage.lastUpdateTime = Date.now();
-            
-            // Replace the message in the array to trigger reactivity
-            messages.value.splice(index, 1, updatedMessage);
-            
-            // Force a reactive update by also updating the reference
-            assistantMessage.content = updatedMessage.content;
-            
-            // Debug: log content updates
-            console.log(`Updated content: "${updatedMessage.content.substring(0, 50)}${updatedMessage.content.length > 50 ? '...' : ''}"`);
-          } else {
-            // Fallback to direct modification if message not found
-            assistantMessage.content = (assistantMessage.content || '') + content;
-            console.log(`Fallback update: "${assistantMessage.content.substring(0, 50)}${assistantMessage.content.length > 50 ? '...' : ''}"`);
-          }
-        };
-        
-        // Use requestAnimationFrame for smoother updates that align with browser refresh cycles
-        window.requestAnimationFrame(updateMessageContent);
+        // Simple, direct update for better performance
+        const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+        if (index !== -1) {
+          // Create a new object to trigger Vue reactivity
+          const updatedMessage = { ...messages.value[index] };
+          
+          // Ensure content is initialized and append new content
+          updatedMessage.content = (updatedMessage.content || '') + content;
+          
+          // Replace the message in the array to trigger reactivity
+          messages.value.splice(index, 1, updatedMessage);
+          
+          // Force a reactive update by also updating the reference
+          assistantMessage.content = updatedMessage.content;
+          
+          // Debug: log content updates
+          console.log(`Updated content: "${updatedMessage.content.substring(0, 50)}${updatedMessage.content.length > 50 ? '...' : ''}"`);
+        } else {
+          // Fallback to direct modification if message not found
+          assistantMessage.content = (assistantMessage.content || '') + content;
+          console.log(`Fallback update: "${assistantMessage.content.substring(0, 50)}${assistantMessage.content.length > 50 ? '...' : ''}"`);
+        }
       },
       // On done
       () => {
@@ -351,28 +339,25 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Message fade-in animation */
-.message-fade-enter-active {
-  transition: all 0.5s ease-out;
+/* New message fade-in animation */
+@keyframes fadeInMessage {
+  from { 
+    opacity: 0.5; 
+    transform: translateY(10px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.message-fade-leave-active {
-  transition: all 0.3s ease-in;
-}
-.message-fade-enter-from, 
-.message-fade-leave-to {
-  opacity: 0;
-  transform: translateY(20px);
+
+.message-container:last-child {
+  animation: fadeInMessage 0.3s ease-out;
 }
 
 /* Smooth scrolling for the messages container */
 .overflow-y-auto {
   scroll-behavior: smooth;
   overscroll-behavior: contain;
-}
-
-/* Optimize rendering performance */
-.flex-1 {
-  will-change: transform;
-  backface-visibility: hidden;
 }
 </style>
