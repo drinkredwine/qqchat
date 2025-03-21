@@ -51,10 +51,12 @@
               ? 'bg-blue-600 text-white rounded-br-none shadow-md' 
               : 'bg-gray-200 text-gray-800 rounded-bl-none shadow'"
           >
-            <p>{{ message.content }}</p>
+            <p class="text-left">{{ message.content }}</p>
             <div 
-              class="text-xs mt-1 flex items-center justify-end"
-              :class="message.senderId === currentUser.id ? 'text-white/70' : 'text-gray-500'"
+              class="text-xs mt-1 flex items-center"
+              :class="[
+                message.senderId === currentUser.id ? 'text-white/70 justify-end' : 'text-gray-500 justify-start'
+              ]"
             >
               {{ formatTime(message.timestamp) }}
               <span v-if="message.senderId === currentUser.id" class="ml-1">
