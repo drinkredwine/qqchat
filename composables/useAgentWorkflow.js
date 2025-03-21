@@ -218,6 +218,7 @@ export function useAgentWorkflow() {
       
       // Execute each step in the plan
       const stepResults = [];
+      let cumulativeContext = '';
       
       for (let i = 0; i < executionPlan.value.length; i++) {
         currentExecutionStep.value = i;
@@ -228,6 +229,14 @@ export function useAgentWorkflow() {
           stepIndex: i,
           step: step
         });
+        
+        // Build context based on previous steps' results
+        if (i > 0) {
+          cumulativeContext = stepResults.map((result, idx) => {
+            const prevStep = executionPlan.value[idx];
+            return `Step ${idx + 1}: ${prevStep.title}\n${result}`;
+          }).join('\n\n');
+        }
         
         const stepPrompt = `
           You are executing step ${i + 1} of a plan to answer this question:
@@ -240,10 +249,12 @@ export function useAgentWorkflow() {
           Step ${i + 1}: ${step.title}
           ${step.description}
           
-          ${i > 0 ? `Previous step results:\\n${stepResults.map((r, idx) => `Step ${idx + 1}: ${r}`).join('\\n')}` : ''}
+          ${i > 0 ? `Previous steps' results:\\n\\n${cumulativeContext}` : ''}
           
           Execute this step thoroughly and provide a detailed result.
-          Focus only on this specific step, not the entire question.
+          Build upon the previous steps' results if available.
+          Focus on generating content that will be useful for subsequent steps.
+          Do not repeat information that has already been covered in previous steps.
         `;
         
         // Use a try-catch block to handle potential API errors
@@ -295,6 +306,14 @@ export function useAgentWorkflow() {
         Provide a comprehensive final answer to the original question.
         Make sure to integrate insights from all steps.
         Format your response in a clear, well-structured way.
+        
+        IMPORTANT:
+        - Your answer should be a cohesive, standalone response that directly addresses the original question
+        - Do NOT include any meta-commentary about the analysis process
+        - Do NOT start with phrases like "Based on my analysis..." or "After executing the plan..."
+        - Do NOT mention steps, analysis, or the workflow in your answer
+        - Simply provide a clear, comprehensive, and well-structured answer as if you had known it all along
+        - Use appropriate formatting like paragraphs, bullet points, or numbered lists where relevant
       `;
       
       // Use a try-catch block to handle potential API errors
@@ -318,16 +337,20 @@ export function useAgentWorkflow() {
           summaryResponse.response && 
           summaryResponse.response[0] && 
           summaryResponse.response[0].content) {
-        finalSummary.value = summaryResponse.response[0].content;
+        // Clean the summary of any meta-commentary
+        finalSummary.value = cleanFinalSummary(summaryResponse.response[0].content);
       } else {
         console.warn('Invalid summary response, using fallback summary');
-        finalSummary.value = `Based on my analysis and execution of the plan for your question, here is a comprehensive answer:
+        finalSummary.value = `To answer your question: ${question.substring(0, 50)}${question.length > 50 ? '...' : ''}
         
-        ${executionPlan.value.map((step, idx) => 
-          `From step ${idx + 1} (${step.title}): ${step.result ? step.result.substring(0, 100) + '...' : 'Completed successfully'}`
-        ).join('\n\n')}
+        ${executionPlan.value.map((step, idx) => {
+          // Extract key insights from each step result, limited to 100 chars
+          const stepResult = step.result || '';
+          const keyInsight = stepResult.substring(0, 200) + (stepResult.length > 200 ? '...' : '');
+          return keyInsight;
+        }).join('\n\n')}
         
-        In conclusion, I've addressed your question to the best of my abilities based on the information available.`;
+        I hope this addresses your question. Please let me know if you need any clarification or have follow-up questions.`;
       }
       
       // Complete the workflow
@@ -362,6 +385,73 @@ export function useAgentWorkflow() {
         success: false
       };
     }
+  };
+  
+  // Helper function to clean the final summary of any meta-commentary
+  const cleanFinalSummary = (summary) => {
+    if (!summary) return '';
+    
+    // Remove common meta-commentary phrases
+    let cleaned = summary;
+    
+    // List of phrases to remove from the beginning of the summary
+    const metaPhrases = [
+      'Based on my analysis',
+      'Based on the analysis',
+      'After analyzing',
+      'After executing the plan',
+      'Based on the completed plan',
+      'Based on the results',
+      'From my analysis',
+      'From the analysis',
+      'Having analyzed',
+      'Having completed the plan',
+      'In summary',
+      'In conclusion',
+      'To summarize',
+      'To conclude',
+      'After completing the steps',
+      'Based on the step-by-step results',
+      'After reviewing the results',
+      'Based on the information gathered',
+      'Based on my research',
+      'Here is a comprehensive answer',
+      'Here is my answer',
+      'Here\'s what I found',
+      'Here is a summary',
+      'Here\'s a summary'
+    ];
+    
+    // Check if summary starts with any meta phrase
+    for (const phrase of metaPhrases) {
+      if (cleaned.toLowerCase().startsWith(phrase.toLowerCase())) {
+        // Find the end of the phrase (usually followed by a comma, colon, or period)
+        const match = cleaned.match(new RegExp(`^${phrase}[,:.;]?\\s*`, 'i'));
+        if (match) {
+          cleaned = cleaned.substring(match[0].length);
+          // Capitalize the first letter of the new summary
+          cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+          break;
+        }
+      }
+    }
+    
+    // Remove phrases like "In conclusion" or "To summarize" from the end
+    const conclusionPhrases = [
+      'In conclusion',
+      'To summarize',
+      'To conclude',
+      'In summary'
+    ];
+    
+    for (const phrase of conclusionPhrases) {
+      const index = cleaned.toLowerCase().lastIndexOf(phrase.toLowerCase());
+      if (index !== -1 && index > cleaned.length * 0.7) {  // Only if it's in the last 30% of the text
+        cleaned = cleaned.substring(0, index).trim();
+      }
+    }
+    
+    return cleaned;
   };
   
   // Helper function to parse plan steps from text
@@ -501,6 +591,7 @@ export function useAgentWorkflow() {
     isComplexQuestion,
     startAgentWorkflow,
     resetWorkflow,
+    cleanFinalSummary,
     AGENT_STATES,
     WORKFLOW_STEPS
   };
