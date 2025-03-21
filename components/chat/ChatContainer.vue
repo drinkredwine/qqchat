@@ -233,6 +233,7 @@ const sendMessage = async () => {
     status: 'sent'
   };
   
+  // Add the user message
   messages.value.push(newMessage);
   messageText.value = '';
   
@@ -241,7 +242,7 @@ const sendMessage = async () => {
     textareaRef.value.style.height = 'auto';
   }
   
-  // Create a placeholder for the assistant's response
+  // Immediately create and add a placeholder for the assistant's response
   const assistantMessage = {
     id: messages.value.length + 1,
     content: '',
@@ -251,8 +252,11 @@ const sendMessage = async () => {
     isStreaming: true
   };
   
-  // Add the placeholder message
+  // Add the placeholder message immediately
   messages.value.push(assistantMessage);
+  
+  // Ensure the UI updates before making the API call
+  await nextTick();
   
   // Prepare the messages for the API in Anthropic format
   const apiMessages = [];
