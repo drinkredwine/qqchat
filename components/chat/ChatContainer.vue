@@ -40,41 +40,14 @@
     
     <!-- Chat messages area -->
     <div class="flex-1 p-4 overflow-y-auto bg-gray-50" ref="messagesContainer">
-      <div v-for="(message, index) in messages" :key="index" class="mb-4">
-        <div 
-          class="flex mb-2"
-          :class="message.senderId === currentUser.id ? 'justify-end' : 'justify-start'"
-        >
-          <div 
-            class="max-w-[80%] rounded-3xl px-4 py-3 break-words"
-            :class="message.senderId === currentUser.id 
-              ? 'bg-blue-600 text-white rounded-br-none shadow-md' 
-              : 'bg-gray-200 text-gray-800 rounded-bl-none shadow'"
-          >
-            <p class="text-left">{{ message.content }}</p>
-            <div 
-              class="text-xs mt-1 flex items-center"
-              :class="[
-                message.senderId === currentUser.id ? 'text-white/70 justify-end' : 'text-gray-500 justify-start'
-              ]"
-            >
-              {{ formatTime(message.timestamp) }}
-              <span v-if="message.senderId === currentUser.id" class="ml-1">
-                <!-- Message status icon -->
-                <svg v-if="message.status === 'sent'" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-                <svg v-else-if="message.status === 'delivered'" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7M5 13l4 4L19 7" />
-                </svg>
-                <svg v-else-if="message.status === 'read'" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7M5 13l4 4L19 7" />
-                </svg>
-              </span>
-            </div>
-          </div>
+      <transition-group name="message-fade" tag="div">
+        <div v-for="(message, index) in messages" :key="message.id || index" class="mb-4">
+          <ChatMessage 
+            :message="message" 
+            :isOwn="message.senderId === currentUser.id" 
+          />
         </div>
-      </div>
+      </transition-group>
     </div>
     
     <!-- Chat input -->
@@ -123,8 +96,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick } from 'vue';
+import { ref, onMounted, watch, nextTick, computed } from 'vue';
 import { useChat } from '~/composables/useChat';
+import ChatMessage from './ChatMessage.vue';
 
 // Mock data for the current user
 const currentUser = ref({
@@ -281,27 +255,38 @@ const sendMessage = async () => {
       response,
       // On content
       (content) => {
-        // Use Vue's reactivity to ensure UI updates
-        // We need to create a new object to trigger reactivity
-        const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
-        if (index !== -1) {
-          // Create a new object to trigger Vue reactivity
-          const updatedMessage = { ...messages.value[index] };
-          // Ensure content is initialized and append new content
-          updatedMessage.content = (updatedMessage.content || '') + content;
-          // Replace the message in the array to trigger reactivity
-          messages.value.splice(index, 1, updatedMessage);
-          
-          // Force a reactive update by also updating the reference
-          assistantMessage.content = updatedMessage.content;
-          
-          // Debug: log content updates
-          console.log(`Updated content: "${updatedMessage.content.substring(0, 50)}${updatedMessage.content.length > 50 ? '...' : ''}"`);
-        } else {
-          // Fallback to direct modification if message not found
-          assistantMessage.content = (assistantMessage.content || '') + content;
-          console.log(`Fallback update: "${assistantMessage.content.substring(0, 50)}${assistantMessage.content.length > 50 ? '...' : ''}"`);
-        }
+        // Debounce updates for smoother animation
+        const updateMessageContent = () => {
+          // Find the message in the array
+          const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+          if (index !== -1) {
+            // Create a new object to trigger Vue reactivity
+            const updatedMessage = { ...messages.value[index] };
+            
+            // Ensure content is initialized and append new content
+            updatedMessage.content = (updatedMessage.content || '') + content;
+            
+            // Add the chunk length to track animation timing
+            updatedMessage.lastChunkLength = content.length;
+            updatedMessage.lastUpdateTime = Date.now();
+            
+            // Replace the message in the array to trigger reactivity
+            messages.value.splice(index, 1, updatedMessage);
+            
+            // Force a reactive update by also updating the reference
+            assistantMessage.content = updatedMessage.content;
+            
+            // Debug: log content updates
+            console.log(`Updated content: "${updatedMessage.content.substring(0, 50)}${updatedMessage.content.length > 50 ? '...' : ''}"`);
+          } else {
+            // Fallback to direct modification if message not found
+            assistantMessage.content = (assistantMessage.content || '') + content;
+            console.log(`Fallback update: "${assistantMessage.content.substring(0, 50)}${assistantMessage.content.length > 50 ? '...' : ''}"`);
+          }
+        };
+        
+        // Use requestAnimationFrame for smoother updates that align with browser refresh cycles
+        window.requestAnimationFrame(updateMessageContent);
       },
       // On done
       () => {
@@ -364,3 +349,30 @@ onMounted(() => {
   }
 });
 </script>
+
+<style scoped>
+/* Message fade-in animation */
+.message-fade-enter-active {
+  transition: all 0.5s ease-out;
+}
+.message-fade-leave-active {
+  transition: all 0.3s ease-in;
+}
+.message-fade-enter-from, 
+.message-fade-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+/* Smooth scrolling for the messages container */
+.overflow-y-auto {
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+/* Optimize rendering performance */
+.flex-1 {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+</style>

@@ -67,6 +67,18 @@ export function useChat() {
       const decoder = new TextDecoder();
       let buffer = '';
       let eventCount = 0;
+      let contentBuffer = ''; // Buffer to accumulate content for smoother updates
+      let lastProcessTime = 0;
+      const CHUNK_THROTTLE_MS = 50; // Throttle updates for smoother animation
+      
+      // Function to process buffered content with throttling
+      const processContentBuffer = () => {
+        if (contentBuffer.length > 0) {
+          onContent(contentBuffer);
+          contentBuffer = '';
+          lastProcessTime = Date.now();
+        }
+      };
       
       while (true) {
         const { done, value } = await reader.read();
@@ -92,12 +104,21 @@ export function useChat() {
                 console.log(`Content chunk: "${contentPreview}${data.content.length > 30 ? '...' : ''}" (length: ${data.content.length})`);
                 // Make sure we're not working with undefined content
                 if (data.content) {
-                  onContent(data.content);
+                  // Add to buffer instead of immediately sending
+                  contentBuffer += data.content;
+                  
+                  // Process buffer if it's getting large or if enough time has passed
+                  const now = Date.now();
+                  if (contentBuffer.length > 100 || (now - lastProcessTime) > CHUNK_THROTTLE_MS) {
+                    processContentBuffer();
+                  }
                 } else {
                   console.warn('Received empty content chunk');
                 }
               } else if (data.type === 'done') {
                 console.log('Received done event');
+                // Process any remaining buffered content
+                processContentBuffer();
                 onDone();
                 return;
               } else if (data.type === 'error') {
@@ -111,6 +132,17 @@ export function useChat() {
             }
           }
         }
+        
+        // Process accumulated content periodically even if no complete messages
+        const now = Date.now();
+        if (contentBuffer.length > 0 && (now - lastProcessTime) > CHUNK_THROTTLE_MS) {
+          processContentBuffer();
+        }
+      }
+      
+      // Process any remaining content
+      if (contentBuffer.length > 0) {
+        processContentBuffer();
       }
       
       // Stream ended without a 'done' event
