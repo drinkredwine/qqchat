@@ -1,0 +1,290 @@
+<template>
+  <div class="flex flex-col h-[600px] w-full max-w-2xl bg-white rounded-xl shadow-xl overflow-hidden">
+    <!-- Chat header -->
+    <div class="flex items-center p-4 border-b border-gray-200 bg-white">
+      <div class="relative mr-3">
+        <img 
+          :src="activeChat.avatar" 
+          :alt="activeChat.name" 
+          class="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+        >
+        <span 
+          class="absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white"
+          :class="activeChat.isOnline ? 'bg-green-500' : 'bg-gray-400'"
+        ></span>
+      </div>
+      <div class="flex-1">
+        <h3 class="text-lg font-semibold text-gray-800">{{ activeChat.name }}</h3>
+        <p class="text-sm text-gray-500">
+          {{ activeChat.isOnline ? 'Online' : formatLastSeen(activeChat.lastSeen) }}
+        </p>
+      </div>
+      <div class="flex space-x-3">
+        <button class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+          </svg>
+        </button>
+        <button class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        </button>
+        <button class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Chat messages area -->
+    <div class="flex-1 p-4 overflow-y-auto bg-gray-50" ref="messagesContainer">
+      <div v-for="(message, index) in messages" :key="index" class="mb-4">
+        <div 
+          class="flex mb-2"
+          :class="message.senderId === currentUser.id ? 'justify-end' : 'justify-start'"
+        >
+          <div 
+            class="max-w-[80%] rounded-3xl px-4 py-3 break-words"
+            :class="message.senderId === currentUser.id 
+              ? 'bg-blue-600 text-white rounded-br-none shadow-md' 
+              : 'bg-gray-200 text-gray-800 rounded-bl-none shadow'"
+          >
+            <p>{{ message.content }}</p>
+            <div 
+              class="text-xs mt-1 flex items-center justify-end"
+              :class="message.senderId === currentUser.id ? 'text-white/70' : 'text-gray-500'"
+            >
+              {{ formatTime(message.timestamp) }}
+              <span v-if="message.senderId === currentUser.id" class="ml-1">
+                <!-- Message status icon -->
+                <svg v-if="message.status === 'sent'" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <svg v-else-if="message.status === 'delivered'" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7M5 13l4 4L19 7" />
+                </svg>
+                <svg v-else-if="message.status === 'read'" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7M5 13l4 4L19 7" />
+                </svg>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Chat input -->
+    <div class="border-t border-gray-200 p-3 bg-white">
+      <div class="flex items-end gap-2">
+        <!-- Attachment button -->
+        <button class="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+          </svg>
+        </button>
+        
+        <!-- Emoji button -->
+        <button class="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+        
+        <!-- Input field -->
+        <div class="flex-1 relative">
+          <textarea
+            v-model="messageText"
+            @keydown.enter.prevent="handleEnterKey"
+            placeholder="Type a message..."
+            class="w-full py-3 px-4 rounded-3xl resize-none border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-colors min-h-[50px] max-h-[120px] overflow-auto"
+            rows="1"
+            ref="textareaRef"
+          ></textarea>
+        </div>
+        
+        <!-- Send button -->
+        <button 
+          @click="sendMessage"
+          class="p-3 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors text-white"
+          :disabled="!messageText.trim()"
+          :class="{ 'opacity-50 cursor-not-allowed': !messageText.trim() }"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, watch } from 'vue';
+
+// Mock data for the current user
+const currentUser = ref({
+  id: 1,
+  name: 'Current User',
+  avatar: 'https://i.pravatar.cc/150?img=1'
+});
+
+// Mock data for the active chat
+const activeChat = ref({
+  id: 2,
+  name: 'John Doe',
+  avatar: 'https://i.pravatar.cc/150?img=2',
+  isOnline: true,
+  lastSeen: new Date()
+});
+
+// Message input text
+const messageText = ref('');
+const textareaRef = ref(null);
+
+// Mock messages data
+const messages = ref([
+  {
+    id: 1,
+    content: 'Hey there! How are you doing today?',
+    timestamp: new Date(Date.now() - 3600000),
+    senderId: 2,
+    status: 'read'
+  },
+  {
+    id: 2,
+    content: 'I\'m doing great, thanks for asking! How about you?',
+    timestamp: new Date(Date.now() - 3000000),
+    senderId: 1,
+    status: 'read'
+  },
+  {
+    id: 3,
+    content: 'Pretty good! Just working on this new project. It\'s coming along nicely.',
+    timestamp: new Date(Date.now() - 2400000),
+    senderId: 2,
+    status: 'read'
+  },
+  {
+    id: 4,
+    content: 'That sounds interesting! What kind of project is it?',
+    timestamp: new Date(Date.now() - 1800000),
+    senderId: 1,
+    status: 'read'
+  },
+  {
+    id: 5,
+    content: 'It\'s a web application with a modern chat interface, similar to Facebook Messenger.',
+    timestamp: new Date(Date.now() - 1200000),
+    senderId: 2,
+    status: 'read'
+  },
+  {
+    id: 6,
+    content: 'That sounds awesome! I\'d love to see it when it\'s ready.',
+    timestamp: new Date(Date.now() - 600000),
+    senderId: 1,
+    status: 'delivered'
+  }
+]);
+
+const messagesContainer = ref(null);
+
+// Function to format the last seen time
+const formatLastSeen = (date) => {
+  if (!date) return 'Offline';
+  
+  const now = new Date();
+  const diff = now - new Date(date);
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days === 1) return 'Yesterday';
+  return `${days} days ago`;
+};
+
+// Format the timestamp to a readable time
+const formatTime = (timestamp) => {
+  if (!timestamp) return '';
+  
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+// Function to send a new message
+const sendMessage = () => {
+  if (!messageText.value.trim()) return;
+  
+  const newMessage = {
+    id: messages.value.length + 1,
+    content: messageText.value,
+    timestamp: new Date(),
+    senderId: currentUser.value.id,
+    status: 'sent'
+  };
+  
+  messages.value.push(newMessage);
+  messageText.value = '';
+  
+  // Reset textarea height
+  if (textareaRef.value) {
+    textareaRef.value.style.height = 'auto';
+  }
+  
+  // Simulate receiving a reply after 2 seconds
+  setTimeout(() => {
+    const reply = {
+      id: messages.value.length + 1,
+      content: 'Thanks for your message! This is an automated reply.',
+      timestamp: new Date(),
+      senderId: activeChat.value.id,
+      status: 'delivered'
+    };
+    messages.value.push(reply);
+  }, 2000);
+};
+
+// Handle Enter key to send the message (Shift+Enter for new line)
+const handleEnterKey = (event) => {
+  if (!event.shiftKey) {
+    sendMessage();
+  }
+};
+
+// Auto-resize textarea based on content
+const resizeTextarea = () => {
+  if (textareaRef.value) {
+    textareaRef.value.style.height = 'auto';
+    textareaRef.value.style.height = `${textareaRef.value.scrollHeight}px`;
+  }
+};
+
+// Watch for changes in message text to resize textarea
+watch(messageText, resizeTextarea);
+
+// Scroll to bottom of messages when new messages are added
+watch(messages, () => {
+  setTimeout(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+    }
+  }, 50);
+}, { deep: true });
+
+onMounted(() => {
+  // Focus the textarea when component is mounted
+  if (textareaRef.value) {
+    textareaRef.value.focus();
+  }
+  
+  // Scroll to bottom of messages on initial load
+  if (messagesContainer.value) {
+    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+  }
+});
+</script>

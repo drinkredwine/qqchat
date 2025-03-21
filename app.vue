@@ -5,7 +5,7 @@
       <p class="text-xl text-gray-700 mb-8">A modern chat interface built with Nuxt.js and Tailwind CSS</p>
       
       <!-- Chat Container Component -->
-      <ChatContainer />
+      <chat-container />
     </div>
     
     <!-- Original demo components (hidden for now) -->
