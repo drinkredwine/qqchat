@@ -16,10 +16,8 @@ export default defineNuxtConfig({
       ]
     }
   },
-  {
-	devServer: {
+  devServer: {
 		port: 3011
-	}
   },
   // Enable pages directory
   pages: true,
