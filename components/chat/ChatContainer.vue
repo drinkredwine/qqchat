@@ -121,7 +121,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, nextTick } from 'vue';
 import { useChat } from '~/composables/useChat';
 
 // Mock data for the current user
@@ -275,7 +275,10 @@ const sendMessage = async () => {
       response,
       // On content
       (content) => {
-        assistantMessage.content += content;
+        // Use Vue's reactivity to ensure UI updates
+        // Replace the entire content to trigger reactivity
+        const newContent = assistantMessage.content + content;
+        assistantMessage.content = newContent;
       },
       // On done
       () => {
@@ -316,14 +319,15 @@ const resizeTextarea = () => {
 // Watch for changes in message text to resize textarea
 watch(messageText, resizeTextarea);
 
-// Scroll to bottom of messages when new messages are added
+// Scroll to bottom of messages when new messages are added or content changes
 watch(messages, () => {
-  setTimeout(() => {
+  // Use nextTick to ensure DOM has updated before scrolling
+  nextTick(() => {
     if (messagesContainer.value) {
       messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
     }
-  }, 50);
-}, { deep: true });
+  });
+}, { deep: true, immediate: true });
 
 onMounted(() => {
   // Focus the textarea when component is mounted
