@@ -7,91 +7,83 @@ This document explains the implementation of smooth fade-in effects for streamin
 
 ### 1. ChatMessage Component Enhancements
 The ChatMessage component was updated to include:
-- CSS transitions for smooth fade-in of new content chunks
-- A transition-group wrapper for animated content updates
-- Improved typing indicator with smoother animation
-- Optimized element rendering with CSS performance best practices
+- A clean, non-distracting typing indicator
+- Subtle fade-in animation for message content
+- Improved visual consistency during streaming
 
 ```vue
-<transition-group 
-  name="fade-chunk" 
-  tag="span"
-  class="inline"
->
-  <!-- Animated content elements -->
-</transition-group>
+<div class="text-left message-content">
+  <span>{{ message.content }}</span>
+  <span 
+    v-if="message.isStreaming" 
+    class="typing-indicator"
+    aria-hidden="true"
+  ></span>
+</div>
 ```
 
-### 2. Content Buffering and Throttling
+### 2. Simple Content Handling
 The useChat.js composable was enhanced with:
-- Content buffering to accumulate small chunks before rendering
-- Throttling mechanism to control update frequency
-- Optimized event handling for streaming responses
+- Basic content buffering for smoother updates
+- Direct content delivery without over-engineering
+- Simplified event handling for streaming responses
 
 ```javascript
-// Buffer content for smoother updates
+// Add content to buffer and process immediately
 contentBuffer += data.content;
-  
-// Process buffer if it's getting large or if enough time has passed
-const now = Date.now();
-if (contentBuffer.length > 100 || (now - lastProcessTime) > CHUNK_THROTTLE_MS) {
-  processContentBuffer();
-}
+processContentBuffer();
 ```
 
-### 3. Animation Optimizations
-Several animation optimizations were implemented:
-- Used requestAnimationFrame for smoother UI updates
-- Added CSS will-change property for better rendering performance
-- Implemented subtle transitions with appropriate timing
-
-```javascript
-// Use requestAnimationFrame for smoother updates
-window.requestAnimationFrame(updateMessageContent);
-```
+### 3. CSS Animation Improvements
+The CSS animations were kept simple and subtle:
+- Elegant typing indicator that doesn't distract from content
+- Simple fade-in for new messages
+- Clean animations that enhance rather than dominate the UI
 
 ## CSS Animation Details
 The following CSS animations were implemented:
 
-1. **Fade-in for new chunks**:
+1. **Typing indicator**:
 ```css
-.fade-chunk-enter-active {
-  transition: all 0.3s ease;
-}
-.fade-chunk-leave-active {
-  transition: all 0.2s ease;
-}
-.fade-chunk-enter-from, 
-.fade-chunk-leave-to {
-  opacity: 0;
-  transform: translateY(5px);
+.typing-indicator {
+  display: inline-block;
+  position: relative;
+  width: 3px;
+  height: 1em;
+  background-color: currentColor;
+  margin-left: 2px;
+  opacity: 0.7;
+  vertical-align: text-bottom;
 }
 ```
 
-2. **Smoother typing indicator**:
+2. **Message fade-in**:
 ```css
-@keyframes pulse-slow {
-  0%, 100% {
-    opacity: 1;
+@keyframes fadeInMessage {
+  from { 
+    opacity: 0.5; 
+    transform: translateY(10px);
   }
-  50% {
-    opacity: 0.4;
+  to { 
+    opacity: 1;
+    transform: translateY(0);
   }
 }
-.animate-pulse-slow {
-  animation: pulse-slow 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+.message-container:last-child {
+  animation: fadeInMessage 0.3s ease-out;
 }
 ```
 
 ## Performance Considerations
-- Content buffering helps reduce excessive DOM updates
-- Throttling prevents UI jitter during fast streaming
-- CSS animations are hardware-accelerated where possible
-- Transitions use appropriate timing functions for natural feel
+- Simple, direct approach to content updates
+- Minimal DOM manipulations
+- CSS animations for smooth visual transitions
+- Focus on user experience rather than technical complexity
 
 ## Future Improvements
 Potential future enhancements include:
-1. Adaptive throttling based on device performance
-2. More sophisticated content chunking for natural reading rhythm
-3. Additional animation options or user preferences
-4. Optimized handling for very long streaming responses
+1. Customizable animation speed options
+2. Adaptive animations based on message length
+3. Additional animation styles as user preferences
+4. Improved accessibility for animated content
