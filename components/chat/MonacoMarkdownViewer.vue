@@ -1,5 +1,5 @@
 <template>
-  <div class="monaco-markdown-viewer" ref="editorContainer"></div>
+  <div class="markdown-viewer" ref="editorContainer"></div>
 </template>
 
 <script setup>
@@ -84,31 +84,12 @@ const processMarkdown = async (content) => {
   }
 };
 
-// Initialize Monaco editor
+// Initialize Monaco editor or render HTML directly
 const initEditor = async () => {
-  if (!editorContainer.value || !monaco) return;
+  if (!editorContainer.value) return;
   
   // Process the markdown content
   const processedContent = await processMarkdown(props.content);
-  
-  // Get the appropriate theme
-  const editorTheme = props.isOwn ? 'chat-dark' : 'chat-light';
-  
-  // Configure Monaco editor
-  editor = createEditor(editorContainer.value, {
-    value: processedContent,
-    language: 'html',
-    theme: editorTheme,
-  });
-  
-  // Adjust editor height to content
-  const contentHeight = Math.min(
-    editor.getContentHeight(),
-    500 // Maximum height
-  );
-  
-  editorContainer.value.style.height = `${contentHeight}px`;
-  editor.layout({ width: editorContainer.value.offsetWidth, height: contentHeight });
   
   // Add custom CSS class based on message ownership
   if (props.isOwn) {
@@ -116,31 +97,38 @@ const initEditor = async () => {
   } else {
     editorContainer.value.classList.add('other-message');
   }
+  
+  // Instead of using Monaco Editor to display HTML code, render the HTML directly
+  editorContainer.value.innerHTML = processedContent;
+  
+  // Set appropriate height based on content
+  const contentHeight = Math.min(
+    editorContainer.value.scrollHeight,
+    500 // Maximum height
+  );
+  
+  editorContainer.value.style.height = `${contentHeight}px`;
 };
 
-// Update editor content when props change
+// Update content when props change
 watch(() => props.content, async (newContent) => {
-  if (editor) {
+  if (editorContainer.value) {
     const processedContent = await processMarkdown(newContent);
-    editor.setValue(processedContent);
+    editorContainer.value.innerHTML = processedContent;
     
     // Adjust height after content change
     const contentHeight = Math.min(
-      editor.getContentHeight(),
+      editorContainer.value.scrollHeight,
       500 // Maximum height
     );
     
     editorContainer.value.style.height = `${contentHeight}px`;
-    editor.layout({ width: editorContainer.value.offsetWidth, height: contentHeight });
   }
 }, { immediate: false });
 
-// Watch for theme changes
+// Watch for theme changes - not needed with direct HTML rendering
 watch(() => props.theme, (newTheme) => {
-  if (editor && monaco) {
-    const editorTheme = props.isOwn ? 'chat-dark' : 'chat-light';
-    monaco.editor.setTheme(editorTheme);
-  }
+  // Theme is now handled via CSS classes
 }, { immediate: false });
 
 // Initialize on mount
@@ -156,9 +144,6 @@ onMounted(async () => {
 
 // Clean up on unmount
 onBeforeUnmount(() => {
-  if (editor) {
-    disposeEditor(editor);
-  }
   if (process.client) {
     window.removeEventListener('resize', handleResize);
   }
@@ -166,11 +151,14 @@ onBeforeUnmount(() => {
 
 // Handle window resize
 const handleResize = () => {
-  if (editor && editorContainer.value) {
-    editor.layout({
-      width: editorContainer.value.offsetWidth,
-      height: editorContainer.value.offsetHeight
-    });
+  if (editorContainer.value) {
+    // Recalculate height based on content
+    const contentHeight = Math.min(
+      editorContainer.value.scrollHeight,
+      500 // Maximum height
+    );
+    
+    editorContainer.value.style.height = `${contentHeight}px`;
   }
 };
 </script>

@@ -8,11 +8,10 @@
       :class="messageClasses"
     >
       <div class="text-left message-content">
-        <!-- Use Monaco Editor for all messages (client-only) -->
+        <!-- Use MarkdownRenderer for all messages (client-only) -->
         <ClientOnly>
-          <MonacoMarkdownViewer 
+          <MarkdownRenderer 
             :content="message.content"
-            :theme="editorTheme"
             :isOwn="isOwn"
           />
           <template #fallback>
@@ -44,7 +43,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
-import MonacoMarkdownViewer from './MonacoMarkdownViewer.vue';
+import MarkdownRenderer from './MarkdownRenderer.vue';
 
 const props = defineProps({
   message: {
@@ -69,10 +68,7 @@ const formattedContent = computed(() => {
   return content;
 });
 
-// Set the editor theme based on message ownership
-const editorTheme = computed(() => {
-  return props.isOwn ? 'vs-dark' : 'vs';
-});
+// We're now using the MarkdownRenderer component instead of Monaco Editor
 
 // Compute classes for message bubble based on whether it's the user's message or not
 const messageClasses = computed(() => {
