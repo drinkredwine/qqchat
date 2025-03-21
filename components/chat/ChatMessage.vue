@@ -7,10 +7,12 @@
       class="max-w-[80%] rounded-3xl px-4 py-3 break-words"
       :class="messageClasses"
     >
-      <p>{{ message.content }}<span v-if="message.isStreaming" class="animate-pulse">▋</span></p>
+      <div class="text-left message-content">
+        <div v-html="formattedContent"></div>
+      </div>
       <div 
-        class="text-xs mt-1 flex items-center justify-end"
-        :class="isOwn ? 'text-white/70' : 'text-gray-500'"
+        class="text-xs mt-1 flex items-center"
+        :class="isOwn ? 'text-white/70 justify-end' : 'text-gray-500 justify-start'"
       >
         {{ formatTime(message.timestamp) }}
         <span v-if="isOwn" class="ml-1">
@@ -31,7 +33,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
   message: {
@@ -42,6 +44,16 @@ const props = defineProps({
     type: Boolean,
     default: false
   }
+});
+
+// Format the content with proper line breaks only
+const formattedContent = computed(() => {
+  let content = props.message.content || '';
+  
+  // Replace line breaks with <br> tags
+  content = content.replace(/\n/g, '<br>');
+  
+  return content;
 });
 
 // Compute classes for message bubble based on whether it's the user's message or not
@@ -59,3 +71,18 @@ const formatTime = (timestamp) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 </script>
+
+<style>
+/* Message content styling */
+.message-content {
+  position: relative;
+  line-height: 1.5;
+}
+
+/* No cursor animation needed */
+
+/* Ensure smooth text rendering */
+.message-content div {
+  word-break: break-word;
+}
+</style>

@@ -40,38 +40,11 @@
     
     <!-- Chat messages area -->
     <div class="flex-1 p-4 overflow-y-auto bg-gray-50" ref="messagesContainer">
-      <div v-for="(message, index) in messages" :key="index" class="mb-4">
-        <div 
-          class="flex mb-2"
-          :class="message.senderId === currentUser.id ? 'justify-end' : 'justify-start'"
-        >
-          <div 
-            class="max-w-[80%] rounded-3xl px-4 py-3 break-words"
-            :class="message.senderId === currentUser.id 
-              ? 'bg-blue-600 text-white rounded-br-none shadow-md' 
-              : 'bg-gray-200 text-gray-800 rounded-bl-none shadow'"
-          >
-            <p>{{ message.content }}</p>
-            <div 
-              class="text-xs mt-1 flex items-center justify-end"
-              :class="message.senderId === currentUser.id ? 'text-white/70' : 'text-gray-500'"
-            >
-              {{ formatTime(message.timestamp) }}
-              <span v-if="message.senderId === currentUser.id" class="ml-1">
-                <!-- Message status icon -->
-                <svg v-if="message.status === 'sent'" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-                <svg v-else-if="message.status === 'delivered'" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7M5 13l4 4L19 7" />
-                </svg>
-                <svg v-else-if="message.status === 'read'" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7M5 13l4 4L19 7" />
-                </svg>
-              </span>
-            </div>
-          </div>
-        </div>
+      <div v-for="(message, index) in messages" :key="message.id || index" class="mb-4 message-container">
+        <ChatMessage 
+          :message="message" 
+          :isOwn="message.senderId === currentUser.id" 
+        />
       </div>
     </div>
     
@@ -121,8 +94,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, nextTick, computed } from 'vue';
 import { useChat } from '~/composables/useChat';
+import ChatMessage from './ChatMessage.vue';
 
 // Mock data for the current user
 const currentUser = ref({
@@ -233,6 +207,7 @@ const sendMessage = async () => {
     status: 'sent'
   };
   
+  // Add the user message
   messages.value.push(newMessage);
   messageText.value = '';
   
@@ -241,7 +216,7 @@ const sendMessage = async () => {
     textareaRef.value.style.height = 'auto';
   }
   
-  // Create a placeholder for the assistant's response
+  // Immediately create and add a placeholder for the assistant's response
   const assistantMessage = {
     id: messages.value.length + 1,
     content: '',
@@ -251,8 +226,11 @@ const sendMessage = async () => {
     isStreaming: true
   };
   
-  // Add the placeholder message
+  // Add the placeholder message immediately
   messages.value.push(assistantMessage);
+  
+  // Ensure the UI updates before making the API call
+  await nextTick();
   
   // Prepare the messages for the API in Anthropic format
   const apiMessages = [];
@@ -275,7 +253,28 @@ const sendMessage = async () => {
       response,
       // On content
       (content) => {
-        assistantMessage.content += content;
+        // Simple, direct update for better performance
+        const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+        if (index !== -1) {
+          // Create a new object to trigger Vue reactivity
+          const updatedMessage = { ...messages.value[index] };
+          
+          // Ensure content is initialized and append new content
+          updatedMessage.content = (updatedMessage.content || '') + content;
+          
+          // Replace the message in the array to trigger reactivity
+          messages.value.splice(index, 1, updatedMessage);
+          
+          // Force a reactive update by also updating the reference
+          assistantMessage.content = updatedMessage.content;
+          
+          // Debug: log content updates
+          console.log(`Updated content: "${updatedMessage.content.substring(0, 50)}${updatedMessage.content.length > 50 ? '...' : ''}"`);
+        } else {
+          // Fallback to direct modification if message not found
+          assistantMessage.content = (assistantMessage.content || '') + content;
+          console.log(`Fallback update: "${assistantMessage.content.substring(0, 50)}${assistantMessage.content.length > 50 ? '...' : ''}"`);
+        }
       },
       // On done
       () => {
@@ -316,14 +315,32 @@ const resizeTextarea = () => {
 // Watch for changes in message text to resize textarea
 watch(messageText, resizeTextarea);
 
-// Scroll to bottom of messages when new messages are added
+// Improved scroll behavior for streaming messages
+const scrollToBottom = (smooth = true) => {
+  if (messagesContainer.value) {
+    nextTick(() => {
+      messagesContainer.value.scrollTo({
+        top: messagesContainer.value.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      });
+    });
+  }
+};
+
+// Scroll when messages are added
 watch(messages, () => {
-  setTimeout(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
-    }
-  }, 50);
-}, { deep: true });
+  scrollToBottom();
+}, { deep: true, immediate: true });
+
+// Also watch for content changes in the last message to ensure smooth scrolling during streaming
+watch(() => {
+  if (messages.value.length > 0) {
+    return messages.value[messages.value.length - 1].content;
+  }
+  return null;
+}, () => {
+  scrollToBottom(true);
+});
 
 onMounted(() => {
   // Focus the textarea when component is mounted
@@ -332,8 +349,29 @@ onMounted(() => {
   }
   
   // Scroll to bottom of messages on initial load
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
-  }
+  scrollToBottom(false);
 });
 </script>
+
+<style scoped>
+/* New message animation similar to Gemini */
+.message-container {
+  transition: opacity 0.3s ease;
+}
+
+.message-container:last-child {
+  opacity: 1;
+}
+
+/* Optimized scrolling for the messages container */
+.overflow-y-auto {
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  padding-bottom: 10px;
+}
+
+/* Improved spacing for better readability */
+.mb-4:not(:last-child) {
+  margin-bottom: 1.5rem;
+}
+</style>

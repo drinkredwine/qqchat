@@ -14,6 +14,11 @@ export function useChat() {
     isLoading.value = true;
     error.value = null;
     
+    console.log('Sending message to API:', {
+      messageCount: messages.length,
+      stream
+    });
+    
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -56,10 +61,30 @@ export function useChat() {
    * @param {Function} onError - Callback for errors
    */
   const processStream = async (response, onContent, onDone, onError) => {
+    console.log('Processing stream response');
     try {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let eventCount = 0;
+      let contentBuffer = ''; // Buffer for content
+      let bufferTimer = null;
+      const BUFFER_DELAY = 30; // Small delay for smoother updates
+      
+      // Function to process buffered content with a slight delay for smoother updates
+      const processContentBuffer = () => {
+        if (contentBuffer.length > 0) {
+          // Clear any existing timer
+          if (bufferTimer) clearTimeout(bufferTimer);
+          
+          // Set a short timeout to batch updates
+          bufferTimer = setTimeout(() => {
+            onContent(contentBuffer);
+            contentBuffer = '';
+            bufferTimer = null;
+          }, BUFFER_DELAY);
+        }
+      };
       
       while (true) {
         const { done, value } = await reader.read();
@@ -77,12 +102,28 @@ export function useChat() {
             try {
               const data = JSON.parse(line.slice(6));
               
+              eventCount++;
+              console.log(`Received event #${eventCount}, type: ${data.type}`);
+              
               if (data.type === 'content' && data.content) {
-                onContent(data.content);
+                const contentPreview = data.content.substring(0, 30);
+                console.log(`Content chunk: "${contentPreview}${data.content.length > 30 ? '...' : ''}" (length: ${data.content.length})`);
+                // Make sure we're not working with undefined content
+                if (data.content) {
+                  // Add to buffer and process immediately
+                  contentBuffer += data.content;
+                  processContentBuffer();
+                } else {
+                  console.warn('Received empty content chunk');
+                }
               } else if (data.type === 'done') {
+                console.log('Received done event');
+                // Process any remaining buffered content
+                processContentBuffer();
                 onDone();
                 return;
               } else if (data.type === 'error') {
+                console.log('Received error:', data.error);
                 onError(data.error);
                 return;
               }
@@ -92,6 +133,16 @@ export function useChat() {
             }
           }
         }
+        
+        // Process any accumulated content immediately
+        if (contentBuffer.length > 0) {
+          processContentBuffer();
+        }
+      }
+      
+      // Process any remaining content
+      if (contentBuffer.length > 0) {
+        processContentBuffer();
       }
       
       // Stream ended without a 'done' event
