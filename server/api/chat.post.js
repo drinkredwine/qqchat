@@ -103,7 +103,7 @@ const streamResponse = async (event, anthropic, messages) => {
           content: chunk.delta.text,
           type: 'content'
         });
-        console.log(`Sending content chunk #${chunkCount}`);
+        console.log(`Sending content chunk #${chunkCount}: "${chunk.delta.text.substring(0, 30)}${chunk.delta.text.length > 30 ? '...' : ''}"`);
         event.node.res.write(`data: ${eventData}\n\n`);
       } else if (chunk.type === 'message_stop') {
         // Send the final chunk

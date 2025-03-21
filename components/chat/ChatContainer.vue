@@ -280,9 +280,16 @@ const sendMessage = async () => {
       // On content
       (content) => {
         // Use Vue's reactivity to ensure UI updates
-        // Replace the entire content to trigger reactivity
-        const newContent = assistantMessage.content + content;
-        assistantMessage.content = newContent;
+        // We need to create a new object to trigger reactivity
+        const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+        if (index !== -1) {
+          const updatedMessage = { ...messages.value[index] };
+          updatedMessage.content = (updatedMessage.content || '') + content;
+          messages.value.splice(index, 1, updatedMessage);
+        } else {
+          // Fallback to direct modification if message not found
+          assistantMessage.content = (assistantMessage.content || '') + content;
+        }
       },
       // On done
       () => {

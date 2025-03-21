@@ -88,8 +88,14 @@ export function useChat() {
               console.log(`Received event #${eventCount}, type: ${data.type}`);
               
               if (data.type === 'content' && data.content) {
-                console.log(`Content chunk: ${data.content.substring(0, 20)}...`);
-                onContent(data.content);
+                const contentPreview = data.content.substring(0, 30);
+                console.log(`Content chunk: "${contentPreview}${data.content.length > 30 ? '...' : ''}" (length: ${data.content.length})`);
+                // Make sure we're not working with undefined content
+                if (data.content) {
+                  onContent(data.content);
+                } else {
+                  console.warn('Received empty content chunk');
+                }
               } else if (data.type === 'done') {
                 console.log('Received done event');
                 onDone();
