@@ -351,12 +351,27 @@ const sendMessage = async () => {
 
 // Handle agent workflow updates
 const handleAgentWorkflowUpdate = (update) => {
+  console.log('Agent workflow update:', update.type);
+  
   // Force UI updates by triggering reactivity
   if (update.type === 'workflow-update') {
     // The workflow state is already updated in the composable
     // This is just to force a UI refresh
     nextTick();
+  } else if (update.type === 'workflow-error') {
+    console.error('Agent workflow error:', update.error);
+    // Force UI update to show error state
+    nextTick();
+  } else if (update.type === 'workflow-complete') {
+    console.log('Agent workflow complete');
+    // Force UI update to show completed state
+    nextTick();
   }
+  
+  // Always scroll to bottom when updates happen
+  nextTick(() => {
+    scrollToBottom();
+  });
 };
 
 // Handle Enter key to send the message (Shift+Enter for new line)
