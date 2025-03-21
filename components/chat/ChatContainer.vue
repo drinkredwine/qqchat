@@ -29,6 +29,23 @@
     <!-- Chat messages area -->
     <div class="flex-1 p-4 overflow-y-auto bg-gray-50" ref="messagesContainer">
       <div v-for="(message, index) in messages" :key="message.id || index" class="mb-4 message-container">
+        <!-- Agent workflow visualization for complex questions -->
+        <div v-if="message.hasAgentWorkflow && !message.isOwn" class="mb-2">
+          <AgentWorkflow
+            :currentState="currentState"
+            :currentStep="currentStep"
+            :workflowSteps="workflowSteps"
+            :executionPlan="executionPlan"
+            :currentExecutionStep="currentExecutionStep"
+            :analysisResults="analysisResults"
+            :finalSummary="finalSummary"
+            :isWorking="isWorking"
+            :errorMessage="errorMessage"
+            :AGENT_STATES="AGENT_STATES"
+          />
+        </div>
+        
+        <!-- Regular message -->
         <ChatMessage 
           :message="message" 
           :isOwn="message.senderId === props.currentUser.id" 
@@ -85,7 +102,9 @@
 import { ref, onMounted, watch, nextTick, computed } from 'vue';
 import { useChat } from '~/composables/useChat';
 import { usePersonas } from '~/composables/usePersonas';
+import { useAgentWorkflow } from '~/composables/useAgentWorkflow';
 import ChatMessage from './ChatMessage.vue';
+import AgentWorkflow from './AgentWorkflow.vue';
 
 const props = defineProps({
   activeChat: {
@@ -103,6 +122,27 @@ const { isLoading, error, sendMessage: sendChatMessage, processStream } = useCha
 
 // Use the personas composable
 const { addMessageToPersona, generatePersonaResponse } = usePersonas();
+
+// Use the agent workflow composable
+const { 
+  currentState, 
+  currentStep,
+  workflowSteps,
+  executionPlan,
+  currentExecutionStep,
+  analysisResults,
+  finalSummary,
+  isWorking,
+  errorMessage,
+  isComplexQuestion,
+  startAgentWorkflow,
+  resetWorkflow,
+  AGENT_STATES,
+  WORKFLOW_STEPS
+} = useAgentWorkflow();
+
+// Track if we're using the agent workflow for the current message
+const usingAgentWorkflow = ref(false);
 
 // Message input text
 const messageText = ref('');
@@ -144,6 +184,13 @@ const formatTime = (timestamp) => {
 const sendMessage = async () => {
   if (!messageText.value.trim()) return;
   
+  // Reset agent workflow state
+  resetWorkflow();
+  usingAgentWorkflow.value = false;
+  
+  // Check if this is a complex question
+  const isComplex = isComplexQuestion(messageText.value);
+  
   // Create the user message
   const newMessage = {
     id: messages.value.length + 1,
@@ -170,12 +217,64 @@ const sendMessage = async () => {
   assistantMessage.status = 'typing';
   assistantMessage.content = '';
   
+  // If this is a complex question, mark it for agent workflow
+  if (isComplex) {
+    assistantMessage.hasAgentWorkflow = true;
+    usingAgentWorkflow.value = true;
+  }
+  
   // Add the placeholder message immediately
   addMessageToPersona(props.activeChat.id, assistantMessage);
   
-  // Ensure the UI updates before making the API call
+  // Ensure the UI updates before proceeding
   await nextTick();
   
+  // If this is a complex question, use the agent workflow
+  if (isComplex) {
+    try {
+      // Start the agent workflow
+      const workflowResult = await startAgentWorkflow(
+        newMessage.content,
+        props.activeChat.id,
+        handleAgentWorkflowUpdate
+      );
+      
+      // If the workflow completed successfully, update the message with the final summary
+      if (workflowResult.success) {
+        const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+        if (index !== -1) {
+          const updatedMessage = { ...messages.value[index] };
+          updatedMessage.content = workflowResult.summary;
+          updatedMessage.isStreaming = false;
+          updatedMessage.status = 'delivered';
+          props.activeChat.messages.splice(index, 1, updatedMessage);
+        }
+      } else {
+        // Handle workflow error
+        const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+        if (index !== -1) {
+          const updatedMessage = { ...messages.value[index] };
+          updatedMessage.content = 'Sorry, an error occurred while processing your complex question.';
+          updatedMessage.isStreaming = false;
+          updatedMessage.status = 'error';
+          props.activeChat.messages.splice(index, 1, updatedMessage);
+        }
+      }
+    } catch (err) {
+      console.error('Agent workflow error:', err);
+      const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+      if (index !== -1) {
+        const updatedMessage = { ...messages.value[index] };
+        updatedMessage.content = 'Sorry, an error occurred while processing your complex question.';
+        updatedMessage.isStreaming = false;
+        updatedMessage.status = 'error';
+        props.activeChat.messages.splice(index, 1, updatedMessage);
+      }
+    }
+    return;
+  }
+  
+  // For simple questions, use the regular streaming approach
   // Prepare the messages for the API in Anthropic format
   const apiMessages = [];
   for (const msg of messages.value) {
@@ -247,6 +346,16 @@ const sendMessage = async () => {
       updatedMessage.status = 'error';
       props.activeChat.messages.splice(index, 1, updatedMessage);
     }
+  }
+};
+
+// Handle agent workflow updates
+const handleAgentWorkflowUpdate = (update) => {
+  // Force UI updates by triggering reactivity
+  if (update.type === 'workflow-update') {
+    // The workflow state is already updated in the composable
+    // This is just to force a UI refresh
+    nextTick();
   }
 };
 
