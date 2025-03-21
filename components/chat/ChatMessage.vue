@@ -8,7 +8,20 @@
       :class="messageClasses"
     >
       <div class="text-left message-content">
-        <div v-html="formattedContent"></div>
+        <!-- Use Monaco Editor for messages with code blocks or markdown (client-only) -->
+        <ClientOnly>
+          <MonacoMarkdownViewer 
+            v-if="hasMarkdownOrCode"
+            :content="message.content"
+            :theme="editorTheme"
+            :isOwn="isOwn"
+          />
+          <template #fallback>
+            <div v-html="formattedContent" class="fallback-content"></div>
+          </template>
+        </ClientOnly>
+        <!-- Use simple formatting for regular messages -->
+        <div v-if="!hasMarkdownOrCode" v-html="formattedContent"></div>
       </div>
       <div 
         class="text-xs mt-1 flex items-center"
@@ -34,6 +47,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
+import MonacoMarkdownViewer from './MonacoMarkdownViewer.vue';
 
 const props = defineProps({
   message: {
@@ -46,7 +60,23 @@ const props = defineProps({
   }
 });
 
-// Format the content with proper line breaks only
+// Determine if the message contains markdown or code blocks
+const hasMarkdownOrCode = computed(() => {
+  const content = props.message.content || '';
+  
+  // Check for common markdown patterns
+  const hasMarkdown = /(\#{1,6}\s|\*\*|\*|\_|\~\~|\`\`\`|\`|\>\s|\-\s|\+\s|\d+\.\s|\[.*\]\(.*\)|\!\[.*\]\(.*\)|\|[\s\S]*\|)/.test(content);
+  
+  // Check for code blocks
+  const hasCodeBlock = /```[\s\S]*?```/.test(content);
+  
+  // Check for inline code
+  const hasInlineCode = /`[^`]+`/.test(content);
+  
+  return hasMarkdown || hasCodeBlock || hasInlineCode;
+});
+
+// Format the content with proper line breaks only (for non-markdown messages)
 const formattedContent = computed(() => {
   let content = props.message.content || '';
   
@@ -54,6 +84,11 @@ const formattedContent = computed(() => {
   content = content.replace(/\n/g, '<br>');
   
   return content;
+});
+
+// Set the editor theme based on message ownership
+const editorTheme = computed(() => {
+  return props.isOwn ? 'vs-dark' : 'vs';
 });
 
 // Compute classes for message bubble based on whether it's the user's message or not
@@ -84,5 +119,40 @@ const formatTime = (timestamp) => {
 /* Ensure smooth text rendering */
 .message-content div {
   word-break: break-word;
+}
+
+/* Fallback content styling */
+.fallback-content {
+  padding: 0.5rem 0;
+  white-space: pre-wrap;
+}
+
+/* Monaco editor container styling */
+.monaco-markdown-viewer {
+  margin: 0.25rem 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* Monaco editor styling for own messages */
+.own-message .monaco-editor .view-lines {
+  color: white !important;
+}
+
+/* Monaco editor styling for other messages */
+.other-message .monaco-editor .view-lines {
+  color: #374151 !important;
+}
+
+/* Code block styling */
+pre code {
+  border-radius: 0.375rem;
+  font-family: 'Fira Code', monospace !important;
+  font-size: 0.9em;
+}
+
+/* Ensure proper padding within the editor */
+.monaco-editor .view-lines {
+  padding: 0.5rem 0;
 }
 </style>
