@@ -9,23 +9,15 @@
       </button>
       
       <!-- Emoji button -->
-      <div class="relative">
-        <button 
-          @click="toggleEmojiPicker" 
-          class="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
-          ref="emojiButtonRef"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </button>
-        <!-- Emoji picker container -->
-        <div 
-          v-if="showEmojiPicker" 
-          class="absolute bottom-12 left-0 z-10"
-          ref="emojiPickerContainer"
-        ></div>
-      </div>
+      <button 
+        @click="toggleEmojiPicker" 
+        class="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
+        ref="emojiButtonRef"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </button>
       
       <!-- Input field -->
       <div class="flex-1 relative">
@@ -63,7 +55,6 @@ const emit = defineEmits(['send-message']);
 const messageText = ref('');
 const textareaRef = ref(null);
 const emojiButtonRef = ref(null);
-const emojiPickerContainer = ref(null);
 const showEmojiPicker = ref(false);
 let emojiPicker = null;
 
@@ -88,27 +79,32 @@ const handleEnterKey = (event) => {
 
 // Toggle emoji picker visibility
 const toggleEmojiPicker = () => {
-  showEmojiPicker.value = !showEmojiPicker.value;
-  
-  // Initialize emoji picker if it's being shown for the first time
-  if (showEmojiPicker.value && !emojiPicker && emojiButtonRef.value) {
+  if (!emojiPicker && process.client) {
     initEmojiPicker();
+  } else if (emojiPicker) {
+    if (showEmojiPicker.value) {
+      emojiPicker.hide();
+    } else {
+      emojiPicker.show();
+    }
+    showEmojiPicker.value = !showEmojiPicker.value;
   }
 };
 
 // Initialize emoji picker
 const initEmojiPicker = () => {
   if (process.client) {
-    emojiPicker = createPopup({
-      rootElement: emojiPickerContainer.value,
+    const pickerOptions = {
+      rootElement: document.body,
       emojiSize: '1.5rem',
       showPreview: true,
       showCategoryTabs: true,
       showRecents: true,
       position: 'bottom-start',
-      triggerElement: emojiButtonRef.value,
       theme: 'light',
-    }, {
+    };
+    
+    emojiPicker = createPopup(pickerOptions, {
       referenceElement: emojiButtonRef.value,
       triggerElement: emojiButtonRef.value,
     });
@@ -116,10 +112,13 @@ const initEmojiPicker = () => {
     // Handle emoji selection
     emojiPicker.addEventListener('emoji:select', (event) => {
       insertEmojiAtCursor(event.emoji);
+      emojiPicker.hide();
+      showEmojiPicker.value = false;
     });
     
     // Show the picker
     emojiPicker.show();
+    showEmojiPicker.value = true;
     
     // Close the picker when clicking outside
     document.addEventListener('click', handleOutsideClick);
@@ -152,10 +151,10 @@ const insertEmojiAtCursor = (emoji) => {
 const handleOutsideClick = (event) => {
   if (
     emojiPicker && 
+    showEmojiPicker.value &&
     emojiButtonRef.value && 
-    !emojiButtonRef.value.contains(event.target) && 
-    emojiPickerContainer.value && 
-    !emojiPickerContainer.value.contains(event.target)
+    !emojiButtonRef.value.contains(event.target) &&
+    event.target.closest('.picmo__picker') === null
   ) {
     emojiPicker.hide();
     showEmojiPicker.value = false;
@@ -175,16 +174,24 @@ watch(messageText, resizeTextarea);
 
 // Clean up event listeners
 onBeforeUnmount(() => {
-  if (emojiPicker) {
-    emojiPicker.destroy();
+  if (process.client) {
+    if (emojiPicker) {
+      emojiPicker.destroy();
+      emojiPicker = null;
+    }
+    document.removeEventListener('click', handleOutsideClick);
   }
-  document.removeEventListener('click', handleOutsideClick);
 });
 
 onMounted(() => {
   // Focus the textarea when component is mounted
   if (textareaRef.value) {
     textareaRef.value.focus();
+  }
+  
+  // Initialize event listeners
+  if (process.client) {
+    document.addEventListener('click', handleOutsideClick);
   }
 });
 </script>
