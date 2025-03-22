@@ -7,10 +7,21 @@
       class="max-w-[80%] rounded-3xl px-4 py-3 break-words"
       :class="messageClasses"
     >
-      <p>{{ message.content }}<span v-if="message.isStreaming" class="animate-pulse">▋</span></p>
+      <div class="text-left message-content">
+        <!-- Use MarkdownRenderer for all messages (client-only) -->
+        <ClientOnly>
+          <MarkdownRenderer 
+            :content="message.content"
+            :isOwn="isOwn"
+          />
+          <template #fallback>
+            <div v-html="formattedContent" class="fallback-content"></div>
+          </template>
+        </ClientOnly>
+      </div>
       <div 
-        class="text-xs mt-1 flex items-center justify-end"
-        :class="isOwn ? 'text-white/70' : 'text-gray-500'"
+        class="text-xs mt-1 flex items-center"
+        :class="isOwn ? 'text-white/70 justify-end' : 'text-gray-500 justify-start'"
       >
         {{ formatTime(message.timestamp) }}
         <span v-if="isOwn" class="ml-1">
@@ -31,7 +42,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
+import MarkdownRenderer from './MarkdownViewer.vue';
 
 const props = defineProps({
   message: {
@@ -43,6 +55,20 @@ const props = defineProps({
     default: false
   }
 });
+
+// We're now using Monaco Editor for all messages, so we don't need to check for markdown or code
+
+// Format the content with proper line breaks only (for non-markdown messages)
+const formattedContent = computed(() => {
+  let content = props.message.content || '';
+  
+  // Replace line breaks with <br> tags
+  content = content.replace(/\n/g, '<br>');
+  
+  return content;
+});
+
+// We're now using the MarkdownRenderer component instead of Monaco Editor
 
 // Compute classes for message bubble based on whether it's the user's message or not
 const messageClasses = computed(() => {
@@ -59,3 +85,38 @@ const formatTime = (timestamp) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 </script>
+
+<style>
+/* Message content styling */
+.message-content {
+  position: relative;
+  line-height: 1.5;
+}
+
+/* No cursor animation needed */
+
+/* Ensure smooth text rendering */
+.message-content div {
+  word-break: break-word;
+}
+
+/* Fallback content styling */
+.fallback-content {
+  padding: 0.5rem 0;
+  white-space: pre-wrap;
+}
+
+/* Markdown viewer container styling */
+.markdown-viewer {
+  margin: 0.25rem 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* Code block styling */
+pre code {
+  border-radius: 0.375rem;
+  font-family: 'Fira Code', monospace !important;
+  font-size: 0.9em;
+}
+</style>
