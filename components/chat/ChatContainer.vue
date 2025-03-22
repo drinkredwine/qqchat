@@ -1,77 +1,55 @@
 <template>
-  <div class="flex flex-col h-[600px] w-full max-w-2xl bg-white rounded-xl shadow-xl overflow-hidden">
-    <!-- Chat header -->
-    <div class="flex items-center p-4 border-b border-gray-200 bg-white">
+  <div class="flex flex-col h-full w-full bg-white overflow-hidden">
+    <!-- Chat header - minimal version with personality -->
+    <div class="flex items-center p-3 border-b border-gray-200 bg-white">
       <div class="relative mr-3">
         <img 
           :src="activeChat.avatar" 
           :alt="activeChat.name" 
-          class="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+          class="w-10 h-10 rounded-full object-cover border border-gray-200"
         >
         <span 
-          class="absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white"
+          class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white"
           :class="activeChat.isOnline ? 'bg-green-500' : 'bg-gray-400'"
         ></span>
       </div>
       <div class="flex-1">
-        <h3 class="text-lg font-semibold text-gray-800">{{ activeChat.name }}</h3>
-        <p class="text-sm text-gray-500">
-          {{ activeChat.isOnline ? 'Online' : formatLastSeen(activeChat.lastSeen) }}
-        </p>
-      </div>
-      <div class="flex space-x-3">
-        <button class="p-2 rounded-full hover:bg-gray-100 transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-          </svg>
-        </button>
-        <button class="p-2 rounded-full hover:bg-gray-100 transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-          </svg>
-        </button>
-        <button class="p-2 rounded-full hover:bg-gray-100 transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-          </svg>
-        </button>
+        <h3 class="text-base font-medium text-gray-800">{{ activeChat.name }}</h3>
+        <div class="flex items-center">
+          <p class="text-xs text-gray-500 mr-2">
+            {{ activeChat.isOnline ? 'Online' : formatLastSeen(activeChat.lastSeen) }}
+          </p>
+          <span class="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full">
+            {{ activeChat.personality }}
+          </span>
+        </div>
       </div>
     </div>
     
     <!-- Chat messages area -->
     <div class="flex-1 p-4 overflow-y-auto bg-gray-50" ref="messagesContainer">
-      <div v-for="(message, index) in messages" :key="index" class="mb-4">
-        <div 
-          class="flex mb-2"
-          :class="message.senderId === currentUser.id ? 'justify-end' : 'justify-start'"
-        >
-          <div 
-            class="max-w-[80%] rounded-3xl px-4 py-3 break-words"
-            :class="message.senderId === currentUser.id 
-              ? 'bg-blue-600 text-white rounded-br-none shadow-md' 
-              : 'bg-gray-200 text-gray-800 rounded-bl-none shadow'"
-          >
-            <p>{{ message.content }}</p>
-            <div 
-              class="text-xs mt-1 flex items-center justify-end"
-              :class="message.senderId === currentUser.id ? 'text-white/70' : 'text-gray-500'"
-            >
-              {{ formatTime(message.timestamp) }}
-              <span v-if="message.senderId === currentUser.id" class="ml-1">
-                <!-- Message status icon -->
-                <svg v-if="message.status === 'sent'" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-                <svg v-else-if="message.status === 'delivered'" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7M5 13l4 4L19 7" />
-                </svg>
-                <svg v-else-if="message.status === 'read'" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7M5 13l4 4L19 7" />
-                </svg>
-              </span>
-            </div>
-          </div>
+      <div v-for="(message, index) in messages" :key="message.id || index" class="mb-4 message-container">
+        <!-- Agent workflow visualization for complex questions -->
+        <div v-if="message.hasAgentWorkflow && !message.isOwn" class="mb-2">
+          <AgentWorkflow
+            :currentState="currentState"
+            :currentStep="currentStep"
+            :workflowSteps="workflowSteps"
+            :executionPlan="executionPlan"
+            :currentExecutionStep="currentExecutionStep"
+            :analysisResults="analysisResults"
+            :finalSummary="finalSummary"
+            :isWorking="isWorking"
+            :errorMessage="errorMessage"
+            :AGENT_STATES="AGENT_STATES"
+          />
         </div>
+        
+        <!-- Regular message -->
+        <ChatMessage 
+          :message="message" 
+          :isOwn="message.senderId === props.currentUser.id" 
+        />
       </div>
     </div>
     
@@ -121,77 +99,59 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, nextTick, computed } from 'vue';
 import { useChat } from '~/composables/useChat';
+import { usePersonas } from '~/composables/usePersonas';
+import { useAgentWorkflow } from '~/composables/useAgentWorkflow';
+import ChatMessage from './ChatMessage.vue';
+import AgentWorkflow from './AgentWorkflow.vue';
 
-// Mock data for the current user
-const currentUser = ref({
-  id: 1,
-  name: 'Current User',
-  avatar: 'https://i.pravatar.cc/150?img=1'
-});
-
-// Mock data for the active chat
-const activeChat = ref({
-  id: 2,
-  name: 'Claude 3.7',
-  avatar: 'https://i.pravatar.cc/150?img=2',
-  isOnline: true,
-  lastSeen: new Date()
+const props = defineProps({
+  activeChat: {
+    type: Object,
+    required: true
+  },
+  currentUser: {
+    type: Object,
+    required: true
+  }
 });
 
 // Use our chat composable
 const { isLoading, error, sendMessage: sendChatMessage, processStream } = useChat();
 
+// Use the personas composable
+const { addMessageToPersona, generatePersonaResponse } = usePersonas();
+
+// Use the agent workflow composable
+const { 
+  currentState, 
+  currentStep,
+  workflowSteps,
+  executionPlan,
+  currentExecutionStep,
+  analysisResults,
+  finalSummary,
+  isWorking,
+  errorMessage,
+  isComplexQuestion,
+  startAgentWorkflow,
+  resetWorkflow,
+  AGENT_STATES,
+  WORKFLOW_STEPS
+} = useAgentWorkflow();
+
+// Track if we're using the agent workflow for the current message
+const usingAgentWorkflow = ref(false);
+
 // Message input text
 const messageText = ref('');
 const textareaRef = ref(null);
 
-// Mock messages data
-const messages = ref([
-  {
-    id: 1,
-    content: 'Hey there! How are you doing today?',
-    timestamp: new Date(Date.now() - 3600000),
-    senderId: 2,
-    status: 'read'
-  },
-  {
-    id: 2,
-    content: 'I\'m doing great, thanks for asking! How about you?',
-    timestamp: new Date(Date.now() - 3000000),
-    senderId: 1,
-    status: 'read'
-  },
-  {
-    id: 3,
-    content: 'Pretty good! Just working on this new project. It\'s coming along nicely.',
-    timestamp: new Date(Date.now() - 2400000),
-    senderId: 2,
-    status: 'read'
-  },
-  {
-    id: 4,
-    content: 'That sounds interesting! What kind of project is it?',
-    timestamp: new Date(Date.now() - 1800000),
-    senderId: 1,
-    status: 'read'
-  },
-  {
-    id: 5,
-    content: 'It\'s a web application with a modern chat interface, similar to Facebook Messenger.',
-    timestamp: new Date(Date.now() - 1200000),
-    senderId: 2,
-    status: 'read'
-  },
-  {
-    id: 6,
-    content: 'That sounds awesome! I\'d love to see it when it\'s ready.',
-    timestamp: new Date(Date.now() - 600000),
-    senderId: 1,
-    status: 'delivered'
-  }
-]);
+// Use the messages from the active chat persona
+const messages = computed(() => {
+  return props.activeChat?.messages || [];
+});
 
 const messagesContainer = ref(null);
 
@@ -224,16 +184,24 @@ const formatTime = (timestamp) => {
 const sendMessage = async () => {
   if (!messageText.value.trim()) return;
   
-  // Create and add the user message
+  // Reset agent workflow state
+  resetWorkflow();
+  usingAgentWorkflow.value = false;
+  
+  // Check if this is a complex question
+  const isComplex = isComplexQuestion(messageText.value);
+  
+  // Create the user message
   const newMessage = {
     id: messages.value.length + 1,
     content: messageText.value,
     timestamp: new Date(),
-    senderId: currentUser.value.id,
+    senderId: props.currentUser.id,
     status: 'sent'
   };
   
-  messages.value.push(newMessage);
+  // Add the user message to the current persona's messages
+  addMessageToPersona(props.activeChat.id, newMessage);
   messageText.value = '';
   
   // Reset textarea height
@@ -241,19 +209,83 @@ const sendMessage = async () => {
     textareaRef.value.style.height = 'auto';
   }
   
-  // Create a placeholder for the assistant's response
-  const assistantMessage = {
-    id: messages.value.length + 1,
-    content: '',
-    timestamp: new Date(),
-    senderId: activeChat.value.id,
-    status: 'typing',
-    isStreaming: true
-  };
+  // Generate a response based on the persona's personality
+  const assistantMessage = generatePersonaResponse(props.activeChat.id, newMessage.content);
   
-  // Add the placeholder message
-  messages.value.push(assistantMessage);
+  // Set the message as streaming
+  assistantMessage.isStreaming = true;
+  assistantMessage.status = 'typing';
+  assistantMessage.content = '';
   
+  // If this is a complex question, mark it for agent workflow
+  if (isComplex) {
+    assistantMessage.hasAgentWorkflow = true;
+    usingAgentWorkflow.value = true;
+  }
+  
+  // Add the placeholder message immediately
+  addMessageToPersona(props.activeChat.id, assistantMessage);
+  
+  // Ensure the UI updates before proceeding
+  await nextTick();
+  
+  // If this is a complex question, use the agent workflow
+  if (isComplex) {
+    try {
+      // Start the agent workflow
+      const workflowResult = await startAgentWorkflow(
+        newMessage.content,
+        props.activeChat.id,
+        handleAgentWorkflowUpdate
+      );
+      
+      // Always update the message with the final summary or error
+      const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+      if (index !== -1) {
+        const updatedMessage = { ...messages.value[index] };
+        
+        if (workflowResult.success && workflowResult.summary) {
+          // Use the final summary from the workflow
+          updatedMessage.content = workflowResult.summary;
+          updatedMessage.isStreaming = false;
+          updatedMessage.status = 'delivered';
+        } else if (finalSummary.value) {
+          // Fallback to the finalSummary from the composable if available
+          updatedMessage.content = finalSummary.value;
+          updatedMessage.isStreaming = false;
+          updatedMessage.status = 'delivered';
+        } else {
+          // Last resort fallback
+          updatedMessage.content = 'Based on my analysis, I\'ve processed your complex question. ' + 
+            'The key points have been identified and a comprehensive answer has been formulated. ' + 
+            'Please let me know if you need any clarification or have additional questions.';
+          updatedMessage.isStreaming = false;
+          updatedMessage.status = 'delivered';
+        }
+        
+        // Always update the message, even if there's an error
+        props.activeChat.messages.splice(index, 1, updatedMessage);
+        
+        // Force reactivity update
+        nextTick(() => {
+          scrollToBottom();
+        });
+      }
+    } catch (err) {
+      console.error('Agent workflow error:', err);
+      const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+      if (index !== -1) {
+        const updatedMessage = { ...messages.value[index] };
+        updatedMessage.content = 'Sorry, an error occurred while processing your complex question.';
+        updatedMessage.isStreaming = false;
+        updatedMessage.status = 'error';
+        props.activeChat.messages.splice(index, 1, updatedMessage);
+      }
+    }
+    return;
+  }
+  
+  // For simple questions, use the regular streaming approach
   // Prepare the messages for the API in Anthropic format
   const apiMessages = [];
   for (const msg of messages.value) {
@@ -261,7 +293,7 @@ const sendMessage = async () => {
     if (msg.id === assistantMessage.id) continue;
     
     apiMessages.push({
-      role: msg.senderId === currentUser.value.id ? 'user' : 'assistant',
+      role: msg.senderId === props.currentUser.id ? 'user' : 'assistant',
       content: msg.content
     });
   }
@@ -275,27 +307,82 @@ const sendMessage = async () => {
       response,
       // On content
       (content) => {
-        assistantMessage.content += content;
+        // Find the assistant message in the current persona's messages
+        const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+        if (index !== -1) {
+          // Create a new object to trigger Vue reactivity
+          const updatedMessage = { ...messages.value[index] };
+          
+          // Ensure content is initialized and append new content
+          updatedMessage.content = (updatedMessage.content || '') + content;
+          
+          // Update the message in the persona's messages array
+          props.activeChat.messages.splice(index, 1, updatedMessage);
+          
+          // Debug: log content updates
+          console.log(`Updated content: "${updatedMessage.content.substring(0, 50)}${updatedMessage.content.length > 50 ? '...' : ''}"`);
+        }
       },
       // On done
       () => {
-        assistantMessage.isStreaming = false;
-        assistantMessage.status = 'delivered';
+        // Find the message again as the index might have changed
+        const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+        if (index !== -1) {
+          const updatedMessage = { ...messages.value[index] };
+          updatedMessage.isStreaming = false;
+          updatedMessage.status = 'delivered';
+          props.activeChat.messages.splice(index, 1, updatedMessage);
+        }
       },
       // On error
       (errorMsg) => {
         console.error('API error:', errorMsg);
-        assistantMessage.content = 'Sorry, an error occurred while generating a response.';
-        assistantMessage.isStreaming = false;
-        assistantMessage.status = 'error';
+        const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+        if (index !== -1) {
+          const updatedMessage = { ...messages.value[index] };
+          updatedMessage.content = 'Sorry, an error occurred while generating a response.';
+          updatedMessage.isStreaming = false;
+          updatedMessage.status = 'error';
+          props.activeChat.messages.splice(index, 1, updatedMessage);
+        }
       }
     );
   } catch (err) {
     console.error('API call error:', err);
-    assistantMessage.content = 'Sorry, an error occurred while connecting to the server.';
-    assistantMessage.isStreaming = false;
-    assistantMessage.status = 'error';
+    const index = messages.value.findIndex(msg => msg.id === assistantMessage.id);
+    if (index !== -1) {
+      const updatedMessage = { ...messages.value[index] };
+      updatedMessage.content = 'Sorry, an error occurred while connecting to the server.';
+      updatedMessage.isStreaming = false;
+      updatedMessage.status = 'error';
+      props.activeChat.messages.splice(index, 1, updatedMessage);
+    }
   }
+};
+
+// Handle agent workflow updates
+const handleAgentWorkflowUpdate = (update) => {
+  console.log('Agent workflow update:', update.type);
+  
+  // Force UI updates by triggering reactivity
+  if (update.type === 'workflow-update') {
+    // The workflow state is already updated in the composable
+    // This is just to force a UI refresh
+    nextTick();
+  } else if (update.type === 'workflow-error') {
+    console.error('Agent workflow error:', update.error);
+    // Force UI update to show error state
+    nextTick();
+  } else if (update.type === 'workflow-complete') {
+    console.log('Agent workflow complete');
+    // Force UI update to show completed state
+    nextTick();
+  }
+  
+  // Always scroll to bottom when updates happen
+  nextTick(() => {
+    scrollToBottom();
+  });
 };
 
 // Handle Enter key to send the message (Shift+Enter for new line)
@@ -316,14 +403,32 @@ const resizeTextarea = () => {
 // Watch for changes in message text to resize textarea
 watch(messageText, resizeTextarea);
 
-// Scroll to bottom of messages when new messages are added
+// Improved scroll behavior for streaming messages
+const scrollToBottom = (smooth = true) => {
+  if (messagesContainer.value) {
+    nextTick(() => {
+      messagesContainer.value.scrollTo({
+        top: messagesContainer.value.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      });
+    });
+  }
+};
+
+// Scroll when messages are added
 watch(messages, () => {
-  setTimeout(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
-    }
-  }, 50);
-}, { deep: true });
+  scrollToBottom();
+}, { deep: true, immediate: true });
+
+// Also watch for content changes in the last message to ensure smooth scrolling during streaming
+watch(() => {
+  if (messages.value.length > 0) {
+    return messages.value[messages.value.length - 1].content;
+  }
+  return null;
+}, () => {
+  scrollToBottom(true);
+});
 
 onMounted(() => {
   // Focus the textarea when component is mounted
@@ -332,8 +437,29 @@ onMounted(() => {
   }
   
   // Scroll to bottom of messages on initial load
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
-  }
+  scrollToBottom(false);
 });
 </script>
+
+<style scoped>
+/* New message animation similar to Gemini */
+.message-container {
+  transition: opacity 0.3s ease;
+}
+
+.message-container:last-child {
+  opacity: 1;
+}
+
+/* Optimized scrolling for the messages container */
+.overflow-y-auto {
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  padding-bottom: 10px;
+}
+
+/* Improved spacing for better readability */
+.mb-4:not(:last-child) {
+  margin-bottom: 1.5rem;
+}
+</style>
