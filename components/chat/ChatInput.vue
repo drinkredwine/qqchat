@@ -9,15 +9,28 @@
       </button>
       
       <!-- Emoji button -->
-      <button 
-        @click="toggleEmojiPicker" 
-        class="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
-        ref="emojiButtonRef"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </button>
+      <div class="relative">
+        <button 
+          @click="toggleEmojiPicker" 
+          class="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+        
+        <!-- Emoji picker dropdown -->
+        <div v-if="showEmojiPicker" class="absolute bottom-12 left-0 z-50 bg-white rounded-lg shadow-lg p-2 border border-gray-200 w-64 grid grid-cols-8 gap-1 max-h-[300px] overflow-y-auto">
+          <button 
+            v-for="emoji in commonEmojis" 
+            :key="emoji"
+            @click="insertEmoji(emoji)"
+            class="emoji-btn p-1 text-xl hover:bg-gray-100 rounded"
+          >
+            {{ emoji }}
+          </button>
+        </div>
+      </div>
       
       <!-- Input field -->
       <div class="flex-1 relative">
@@ -48,15 +61,26 @@
 
 <script setup>
 import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
-import { createPopup } from '@picmo/popup-picker';
-import * as picmo from 'picmo';
 
 const emit = defineEmits(['send-message']);
 const messageText = ref('');
 const textareaRef = ref(null);
-const emojiButtonRef = ref(null);
 const showEmojiPicker = ref(false);
-let emojiPicker = null;
+
+// Common emojis list
+const commonEmojis = [
+  '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇',
+  '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚',
+  '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩',
+  '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣',
+  '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬',
+  '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗',
+  '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯',
+  '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐',
+  '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈',
+  '👋', '🤚', '🖐', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞',
+  '🫶', '❤️', '🔥', '👍', '👎', '👏', '🙌', '🤝', '🙏', '💯'
+];
 
 // Function to send a message
 const sendMessage = () => {
@@ -79,54 +103,18 @@ const handleEnterKey = (event) => {
 
 // Toggle emoji picker visibility
 const toggleEmojiPicker = () => {
-  if (!emojiPicker && process.client) {
-    initEmojiPicker();
-  } else if (emojiPicker) {
-    if (showEmojiPicker.value) {
-      emojiPicker.hide();
-    } else {
-      emojiPicker.show();
-    }
-    showEmojiPicker.value = !showEmojiPicker.value;
-  }
-};
-
-// Initialize emoji picker
-const initEmojiPicker = () => {
-  if (process.client) {
-    const pickerOptions = {
-      rootElement: document.body,
-      emojiSize: '1.5rem',
-      showPreview: true,
-      showCategoryTabs: true,
-      showRecents: true,
-      position: 'bottom-start',
-      theme: 'light',
-    };
-    
-    emojiPicker = createPopup(pickerOptions, {
-      referenceElement: emojiButtonRef.value,
-      triggerElement: emojiButtonRef.value,
-    });
-
-    // Handle emoji selection
-    emojiPicker.addEventListener('emoji:select', (event) => {
-      insertEmojiAtCursor(event.emoji);
-      emojiPicker.hide();
-      showEmojiPicker.value = false;
-    });
-    
-    // Show the picker
-    emojiPicker.show();
-    showEmojiPicker.value = true;
-    
-    // Close the picker when clicking outside
-    document.addEventListener('click', handleOutsideClick);
+  showEmojiPicker.value = !showEmojiPicker.value;
+  
+  // Add click outside listener when picker is shown
+  if (showEmojiPicker.value && process.client) {
+    setTimeout(() => {
+      document.addEventListener('click', handleOutsideClick);
+    }, 0);
   }
 };
 
 // Insert emoji at cursor position
-const insertEmojiAtCursor = (emoji) => {
+const insertEmoji = (emoji) => {
   if (!textareaRef.value) return;
   
   const textarea = textareaRef.value;
@@ -145,19 +133,17 @@ const insertEmojiAtCursor = (emoji) => {
     textarea.selectionStart = startPos + emoji.length;
     textarea.selectionEnd = startPos + emoji.length;
   }, 0);
+  
+  // Hide emoji picker after selection
+  showEmojiPicker.value = false;
 };
 
 // Handle clicks outside the emoji picker
 const handleOutsideClick = (event) => {
-  if (
-    emojiPicker && 
-    showEmojiPicker.value &&
-    emojiButtonRef.value && 
-    !emojiButtonRef.value.contains(event.target) &&
-    event.target.closest('.picmo__picker') === null
-  ) {
-    emojiPicker.hide();
+  // Check if the click was outside the emoji picker and button
+  if (!event.target.closest('.emoji-btn') && !event.target.closest('button')) {
     showEmojiPicker.value = false;
+    document.removeEventListener('click', handleOutsideClick);
   }
 };
 
@@ -175,10 +161,6 @@ watch(messageText, resizeTextarea);
 // Clean up event listeners
 onBeforeUnmount(() => {
   if (process.client) {
-    if (emojiPicker) {
-      emojiPicker.destroy();
-      emojiPicker = null;
-    }
     document.removeEventListener('click', handleOutsideClick);
   }
 });
@@ -188,25 +170,21 @@ onMounted(() => {
   if (textareaRef.value) {
     textareaRef.value.focus();
   }
-  
-  // Initialize event listeners
-  if (process.client) {
-    document.addEventListener('click', handleOutsideClick);
-  }
 });
 </script>
 
 <style>
-/* Custom styling for emoji picker */
-.picmo__picker {
-  --border-radius: 0.5rem;
-  --category-icon-size: 1.2rem;
-  --emoji-size: 1.5rem;
-  --emoji-padding: 0.375rem;
-  --input-font-size: 0.875rem;
-  --input-border-radius: 0.375rem;
-  --ui-font-size: 0.875rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  max-width: 320px;
+.emoji-btn {
+  cursor: pointer;
+  transition: background-color 0.2s;
+  user-select: none;
+}
+
+.emoji-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.emoji-btn:active {
+  background-color: #e5e7eb;
 }
 </style>
