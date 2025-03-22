@@ -43,7 +43,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
-import MarkdownRenderer from './MarkdownRenderer.vue';
+import MarkdownRenderer from './MarkdownViewer.vue';
 
 const props = defineProps({
   message: {
@@ -106,21 +106,11 @@ const formatTime = (timestamp) => {
   white-space: pre-wrap;
 }
 
-/* Monaco editor container styling */
-.monaco-markdown-viewer {
+/* Markdown viewer container styling */
+.markdown-viewer {
   margin: 0.25rem 0;
   border-radius: 0.5rem;
   overflow: hidden;
-}
-
-/* Monaco editor styling for own messages */
-.own-message .monaco-editor .view-lines {
-  color: white !important;
-}
-
-/* Monaco editor styling for other messages */
-.other-message .monaco-editor .view-lines {
-  color: #374151 !important;
 }
 
 /* Code block styling */
@@ -128,10 +118,5 @@ pre code {
   border-radius: 0.375rem;
   font-family: 'Fira Code', monospace !important;
   font-size: 0.9em;
-}
-
-/* Ensure proper padding within the editor */
-.monaco-editor .view-lines {
-  padding: 0.5rem 0;
 }
 </style>
