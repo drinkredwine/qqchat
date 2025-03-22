@@ -137,6 +137,7 @@ const {
   isComplexQuestion,
   startAgentWorkflow,
   resetWorkflow,
+  cleanFinalSummary,
   AGENT_STATES,
   WORKFLOW_STEPS
 } = useAgentWorkflow();
@@ -245,20 +246,22 @@ const sendMessage = async () => {
         const updatedMessage = { ...messages.value[index] };
         
         if (workflowResult.success && workflowResult.summary) {
-          // Use the final summary from the workflow
-          updatedMessage.content = workflowResult.summary;
+          // Use the final summary from the workflow, cleaned of any meta-commentary
+          updatedMessage.content = cleanFinalSummary(workflowResult.summary);
           updatedMessage.isStreaming = false;
           updatedMessage.status = 'delivered';
         } else if (finalSummary.value) {
           // Fallback to the finalSummary from the composable if available
+          // (which should already be cleaned in the workflow)
           updatedMessage.content = finalSummary.value;
           updatedMessage.isStreaming = false;
           updatedMessage.status = 'delivered';
         } else {
           // Last resort fallback
-          updatedMessage.content = 'Based on my analysis, I\'ve processed your complex question. ' + 
-            'The key points have been identified and a comprehensive answer has been formulated. ' + 
-            'Please let me know if you need any clarification or have additional questions.';
+          updatedMessage.content = 'I\'ve analyzed your question and found the most relevant information. ' + 
+            'Here\'s what you need to know: ' + question.substring(0, 50) + 
+            (question.length > 50 ? '...' : '') + 
+            '\n\nPlease let me know if you need any clarification or have additional questions.';
           updatedMessage.isStreaming = false;
           updatedMessage.status = 'delivered';
         }

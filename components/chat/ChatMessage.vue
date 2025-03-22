@@ -8,7 +8,16 @@
       :class="messageClasses"
     >
       <div class="text-left message-content">
-        <div v-html="formattedContent"></div>
+        <!-- Use MarkdownRenderer for all messages (client-only) -->
+        <ClientOnly>
+          <MarkdownRenderer 
+            :content="message.content"
+            :isOwn="isOwn"
+          />
+          <template #fallback>
+            <div v-html="formattedContent" class="fallback-content"></div>
+          </template>
+        </ClientOnly>
       </div>
       <div 
         class="text-xs mt-1 flex items-center"
@@ -34,6 +43,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
+import MarkdownRenderer from './MarkdownViewer.vue';
 
 const props = defineProps({
   message: {
@@ -46,7 +56,9 @@ const props = defineProps({
   }
 });
 
-// Format the content with proper line breaks only
+// We're now using Monaco Editor for all messages, so we don't need to check for markdown or code
+
+// Format the content with proper line breaks only (for non-markdown messages)
 const formattedContent = computed(() => {
   let content = props.message.content || '';
   
@@ -55,6 +67,8 @@ const formattedContent = computed(() => {
   
   return content;
 });
+
+// We're now using the MarkdownRenderer component instead of Monaco Editor
 
 // Compute classes for message bubble based on whether it's the user's message or not
 const messageClasses = computed(() => {
@@ -84,5 +98,25 @@ const formatTime = (timestamp) => {
 /* Ensure smooth text rendering */
 .message-content div {
   word-break: break-word;
+}
+
+/* Fallback content styling */
+.fallback-content {
+  padding: 0.5rem 0;
+  white-space: pre-wrap;
+}
+
+/* Markdown viewer container styling */
+.markdown-viewer {
+  margin: 0.25rem 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* Code block styling */
+pre code {
+  border-radius: 0.375rem;
+  font-family: 'Fira Code', monospace !important;
+  font-size: 0.9em;
 }
 </style>
