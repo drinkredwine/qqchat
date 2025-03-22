@@ -53,48 +53,8 @@
       </div>
     </div>
     
-    <!-- Chat input -->
-    <div class="border-t border-gray-200 p-3 bg-white">
-      <div class="flex items-end gap-2">
-        <!-- Attachment button -->
-        <button class="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-          </svg>
-        </button>
-        
-        <!-- Emoji button -->
-        <button class="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </button>
-        
-        <!-- Input field -->
-        <div class="flex-1 relative">
-          <textarea
-            v-model="messageText"
-            @keydown.enter.prevent="handleEnterKey"
-            placeholder="Type a message..."
-            class="w-full py-3 px-4 rounded-3xl resize-none border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-colors min-h-[50px] max-h-[120px] overflow-auto"
-            rows="1"
-            ref="textareaRef"
-          ></textarea>
-        </div>
-        
-        <!-- Send button -->
-        <button 
-          @click="sendMessage"
-          class="p-3 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors text-white"
-          :disabled="!messageText.trim()"
-          :class="{ 'opacity-50 cursor-not-allowed': !messageText.trim() }"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-          </svg>
-        </button>
-      </div>
-    </div>
+    <!-- Chat input component -->
+    <ChatInput @send-message="sendMessage" />
   </div>
 </template>
 
@@ -145,10 +105,6 @@ const {
 // Track if we're using the agent workflow for the current message
 const usingAgentWorkflow = ref(false);
 
-// Message input text
-const messageText = ref('');
-const textareaRef = ref(null);
-
 // Use the messages from the active chat persona
 const messages = computed(() => {
   return props.activeChat?.messages || [];
@@ -182,20 +138,20 @@ const formatTime = (timestamp) => {
 };
 
 // Function to send a new message
-const sendMessage = async () => {
-  if (!messageText.value.trim()) return;
+const sendMessage = async (text) => {
+  if (!text || !text.trim()) return;
   
   // Reset agent workflow state
   resetWorkflow();
   usingAgentWorkflow.value = false;
   
   // Check if this is a complex question
-  const isComplex = isComplexQuestion(messageText.value);
+  const isComplex = isComplexQuestion(text);
   
   // Create the user message
   const newMessage = {
     id: messages.value.length + 1,
-    content: messageText.value,
+    content: text,
     timestamp: new Date(),
     senderId: props.currentUser.id,
     status: 'sent'
@@ -203,12 +159,6 @@ const sendMessage = async () => {
   
   // Add the user message to the current persona's messages
   addMessageToPersona(props.activeChat.id, newMessage);
-  messageText.value = '';
-  
-  // Reset textarea height
-  if (textareaRef.value) {
-    textareaRef.value.style.height = 'auto';
-  }
   
   // Generate a response based on the persona's personality
   const assistantMessage = generatePersonaResponse(props.activeChat.id, newMessage.content);
@@ -388,23 +338,7 @@ const handleAgentWorkflowUpdate = (update) => {
   });
 };
 
-// Handle Enter key to send the message (Shift+Enter for new line)
-const handleEnterKey = (event) => {
-  if (!event.shiftKey) {
-    sendMessage();
-  }
-};
 
-// Auto-resize textarea based on content
-const resizeTextarea = () => {
-  if (textareaRef.value) {
-    textareaRef.value.style.height = 'auto';
-    textareaRef.value.style.height = `${textareaRef.value.scrollHeight}px`;
-  }
-};
-
-// Watch for changes in message text to resize textarea
-watch(messageText, resizeTextarea);
 
 // Improved scroll behavior for streaming messages
 const scrollToBottom = (smooth = true) => {
@@ -434,11 +368,6 @@ watch(() => {
 });
 
 onMounted(() => {
-  // Focus the textarea when component is mounted
-  if (textareaRef.value) {
-    textareaRef.value.focus();
-  }
-  
   // Scroll to bottom of messages on initial load
   scrollToBottom(false);
 });
